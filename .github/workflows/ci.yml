@@ -1,0 +1,28 @@
+name: Pipeline CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: Configuration de l'environnement
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build / Installation des dépendances
+        run: echo "npm ci à venir"
+
+      - name: Linting (ESLint & Prettier)
+        run: echo "npm run lint à venir"
+
+      - name: Tests Automatisés
+        run: echo "npm test à venir"
