@@ -11,4 +11,9 @@
   "dependencies": {
     "pixi.js": "^8.20.1"
   }
+  "scripts": {
+  "dev": "tauri dev",
+  "build": "tauri build",
+  "lint": "eslint ."
+}
 }
