@@ -24,7 +24,7 @@ jobs:
 
       - name: Vérification du style (Linting)
         working-directory: ./server
-        run: npx eslint .
+        run: npm run lint
 
   qualite-client:
     runs-on: ubuntu-latest
@@ -43,7 +43,7 @@ jobs:
 
       - name: Vérification du style (Linting)
         working-directory: ./client
-        run: npx eslint .
+        run: npm run lint
 
   analyse-sonarqube:
     name: Analyse SonarQube
