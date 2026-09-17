@@ -55,7 +55,7 @@ jobs:
           fetch-depth: 0 # Obligatoire pour que SonarQube analyse l'historique complet
 
       - name: Scan SonarCloud
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Fourni automatiquement par GitHub
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Le secret que tu as configuré
