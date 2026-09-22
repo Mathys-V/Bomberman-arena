@@ -24,7 +24,7 @@ jobs:
 
       - name: Vérification du style (Linting)
         working-directory: ./server
-        run: npx eslint .
+        run: npm run lint
 
   qualite-client:
     runs-on: ubuntu-latest
@@ -43,4 +43,19 @@ jobs:
 
       - name: Vérification du style (Linting)
         working-directory: ./client
-        run: npx eslint .
+        run: npm run lint
+
+  analyse-sonarqube:
+    name: Analyse SonarQube
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Obligatoire pour que SonarQube analyse l'historique complet
+
+      - name: Scan SonarCloud
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Fourni automatiquement par GitHub
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Le secret que tu as configuré

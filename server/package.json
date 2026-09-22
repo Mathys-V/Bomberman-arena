@@ -4,7 +4,10 @@
   "description": "",
   "main": "server.ts",
   "scripts": {
+<<<<<<< HEAD
     "start": "ts-node server.ts",
+=======
+>>>>>>> 58dca89e896f04a324ca0d62a66ccf5939f8e5bd
     "test": "jest",
     "lint": "eslint ."
   },
@@ -14,14 +17,23 @@
   "type": "commonjs",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+<<<<<<< HEAD
     "@types/node": "^26.6.2",
     "@types/ws": "^8.18.1",
+=======
+    "@types/jest": "^30.0.0",
+>>>>>>> 58dca89e896f04a324ca0d62a66ccf5939f8e5bd
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "globals": "^17.12.0",
+    "jest": "^30.5.1",
     "prettier": "^3.9.6",
+<<<<<<< HEAD
     "typescript": "^6.0.3",
+=======
+    "ts-jest": "^29.4.12",
+>>>>>>> 58dca89e896f04a324ca0d62a66ccf5939f8e5bd
     "typescript-eslint": "^8.70.0"
   },
   "dependencies": {
