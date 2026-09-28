@@ -1,0 +1,69 @@
+name: Pipeline CI Bomberman
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  qualite-serveur:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: Configuration Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Installation des dépendances Serveur
+        working-directory: ./server
+        run: npm install
+
+      - name: Vérification du style (Linting)
+        working-directory: ./server
+        run: npm run lint
+
+      - name: Exécution des tests unitaires
+        working-directory: ./server
+        run: npm test
+
+  qualite-client:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: Configuration Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Installation des dépendances Client
+        working-directory: ./client
+        run: npm install
+
+      - name: Vérification du style (Linting)
+        working-directory: ./client
+        run: npm run lint
+
+      - name: Exécution des tests unitaires
+        working-directory: ./client
+        run: npm test
+
+  analyse-sonarqube:
+    name: Analyse SonarQube
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Obligatoire pour que SonarQube analyse l'historique complet
+
+      - name: Scan SonarCloud
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Fourni automatiquement par GitHub
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # Le secret que tu as configuré
