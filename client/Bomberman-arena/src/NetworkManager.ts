@@ -35,4 +35,25 @@ export class NetworkManager {
       console.warn("Message ignoré : le WebSocket n'est pas connecté.");
     }
   }
+
+  // Écoute les messages entrants et les transmet au reste du jeu via un callback
+  public listen(callback: (data: unknown) => void): void {
+    if (!this.socket) {
+      console.warn("Impossible d'écouter : le WebSocket n'est pas connecté.");
+      return;
+    }
+
+    this.socket.onmessage = (event: MessageEvent) => {
+      try {
+        // On transforme le texte JSON reçu en objet utilisable
+        const data = JSON.parse(event.data) as unknown;
+        console.log("Message reçu du serveur :", data);
+
+        // On déclenche la fonction callback pour alerter le moteur graphique
+        callback(data);
+      } catch (error) {
+        console.error("Erreur lors de la lecture du message serveur :", error);
+      }
+    };
+  }
 }
