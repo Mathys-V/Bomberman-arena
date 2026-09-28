@@ -10,8 +10,9 @@ COPY package*.json ./
 # Installation sécurisée des dépendances (sans exécuter de scripts tiers)
 RUN npm ci --ignore-scripts
 
-# Copie du reste du code source (N'oublie pas de créer un .dockerignore à côté)
-COPY . .
+# Copie explicite uniquement du code source et de la configuration pour satisfaire SonarQube
+COPY src/ ./src/
+COPY server.ts tsconfig.json ./
 
 # Passage sur l'utilisateur non-root pour des raisons de sécurité
 USER node
