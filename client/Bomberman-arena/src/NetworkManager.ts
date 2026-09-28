@@ -1,9 +1,9 @@
 export class NetworkManager {
   private socket: WebSocket | null = null;
-  private serverUrl: string;
+  private readonly serverUrl: string;
 
   // On permet de passer l'URL en paramètre, avec une valeur par défaut pour le local
-  constructor(serverUrl: string = "ws://localhost:3000") {
+  constructor(serverUrl: string = "ws://localhost:8080") {
     this.serverUrl = serverUrl;
   }
 
@@ -27,7 +27,7 @@ export class NetworkManager {
 
   // Cette méthode prend n'importe quel objet, le transforme en texte JSON et l'envoie
   public sendMessage(message: object): void {
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+    if (this.socket?.readyState === WebSocket.OPEN) {
       const jsonString = JSON.stringify(message);
       this.socket.send(jsonString);
       console.log("Message envoyé au serveur :", jsonString);
