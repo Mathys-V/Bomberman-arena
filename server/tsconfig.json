@@ -13,3 +13,14 @@
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
+    "target": "es2022",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "types": ["node"],
+    "strict": true,
+    "skipLibCheck": true,
+    "sourceMap": true
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
+}
