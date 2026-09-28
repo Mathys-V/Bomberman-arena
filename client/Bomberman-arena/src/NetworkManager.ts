@@ -12,16 +12,27 @@ export class NetworkManager {
     this.socket = new WebSocket(this.serverUrl);
 
     this.socket.onopen = () => {
-      console.log("✅ Connexion WebSocket établie avec succès !");
+      console.log("Connexion WebSocket établie avec succès !");
     };
 
     this.socket.onclose = () => {
-      console.log("🔌 Déconnecté du serveur WebSocket.");
+      console.log("Déconnecté du serveur WebSocket.");
     };
 
     // On type bien l'erreur avec 'Event' pour éviter que le linter ne rouspète
     this.socket.onerror = (error: Event) => {
-      console.error("⚠️ Erreur de connexion WebSocket :", error);
+      console.error("Erreur de connexion WebSocket :", error);
     };
+  }
+
+  // Cette méthode prend n'importe quel objet, le transforme en texte JSON et l'envoie
+  public sendMessage(message: object): void {
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      const jsonString = JSON.stringify(message);
+      this.socket.send(jsonString);
+      console.log("Message envoyé au serveur :", jsonString);
+    } else {
+      console.warn("Message ignoré : le WebSocket n'est pas connecté.");
+    }
   }
 }
