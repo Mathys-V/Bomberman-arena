@@ -4,16 +4,19 @@ FROM node:20-alpine
 # Définition du répertoire de travail dans le conteneur
 WORKDIR /usr/src/app
 
-# Copie des fichiers de dépendances (optimisation du cache Docker)
+# Copie des fichiers de dépendances
 COPY package*.json ./
 
-# Installation des dépendances
-RUN npm install
+# Installation sécurisée des dépendances (sans exécuter de scripts tiers)
+RUN npm ci --ignore-scripts
 
-# Copie du reste du code source du serveur
+# Copie du reste du code source (N'oublie pas de créer un .dockerignore à côté)
 COPY . .
 
-# Exposition du port de communication (à adapter si votre serveur écoute sur un autre port, ex: 3000)
+# Passage sur l'utilisateur non-root pour des raisons de sécurité
+USER node
+
+# Exposition du port de communication
 EXPOSE 8080
 
 # Commande de lancement du serveur
