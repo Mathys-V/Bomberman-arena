@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  bomberman-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" # Mappe le port 8080 de ta machine vers le port 8080 du conteneur
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
