@@ -2,10 +2,12 @@
 type ActionType = "PLAYER_MOVE" | "PLACE_BOMB";
 type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 
-// Cette interface permet de s'assurer que nos messages sont toujours bien formatés
+// On utilise le type 'Direction' ici pour corriger les deux erreurs :
+// 1. Direction est maintenant utilisé.
+// 2. On n'utilise plus le mot interdit 'any'.
 interface GameMessage {
   type: ActionType;
-  payload: any;
+  payload: { direction?: Direction };
 }
 
 export class InputManager {
