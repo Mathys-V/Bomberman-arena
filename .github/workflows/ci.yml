@@ -26,6 +26,10 @@ jobs:
         working-directory: ./server
         run: npm run lint
 
+      - name: Exécution des tests unitaires
+        working-directory: ./server
+        run: npm test
+
   qualite-client:
     runs-on: ubuntu-latest
     steps:
@@ -44,6 +48,10 @@ jobs:
       - name: Vérification du style (Linting)
         working-directory: ./client
         run: npm run lint
+
+      - name: Exécution des tests unitaires
+        working-directory: ./client
+        run: npm test
 
   analyse-sonarqube:
     name: Analyse SonarQube
