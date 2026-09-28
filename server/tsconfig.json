@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
     "module": "commonjs",
     "moduleResolution": "node",
     "esModuleInterop": true,
@@ -8,19 +8,9 @@
     "skipLibCheck": true,
     "types": ["jest", "node"],
     "outDir": "dist",
-    "rootDir": "."
-  },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist"]
-}
-    "target": "es2022",
-    "module": "commonjs",
-    "esModuleInterop": true,
-    "types": ["node"],
-    "strict": true,
-    "skipLibCheck": true,
+    "rootDir": ".",
     "sourceMap": true
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
