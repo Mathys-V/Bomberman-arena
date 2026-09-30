@@ -2,27 +2,28 @@
 
 export interface ClientMessage {
   event: string;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 export interface ServerMessage {
   event: string;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 export class EventRouter {
   public static handleMessage(rawMessage: string): ServerMessage | null {
     try {
       const message: ClientMessage = JSON.parse(rawMessage);
+      const data = message.data || {};
 
       switch (message.event) {
         case "JOIN_LOBBY":
           return {
             event: "LOBBY_UPDATED",
             data: {
-              lobbyId: message.data?.lobbyId || "default_room",
+              lobbyId: (data.lobbyId as string) || "default_room",
               status: "waiting",
-              players: [{ id: message.data?.playerId || "unknown", name: message.data?.name || "Player", ready: true }]
+              players: [{ id: (data.playerId as string) || "unknown", name: (data.name as string) || "Player", ready: true }]
             }
           };
 
@@ -30,10 +31,10 @@ export class EventRouter {
           return {
             event: "POSITION_UPDATED",
             data: {
-              playerId: message.data?.playerId,
-              x: message.data?.x,
-              y: message.data?.y,
-              direction: message.data?.direction
+              playerId: data.playerId,
+              x: data.x,
+              y: data.y,
+              direction: data.direction
             }
           };
 
