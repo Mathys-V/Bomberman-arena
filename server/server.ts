@@ -1,17 +1,7 @@
-import { WebSocketServer } from 'ws';
+// server/server.ts
+import { WebSocketServer } from './src/network/WebSocketServer';
 
-/**
- * Initialise le serveur WebSocket du moteur de jeu Bomberman.
- * @param {number} port - Le port d'écoute du serveur.
- * @returns {WebSocketServer} L'instance du serveur.
- */
-export function startServer(port: number) {
-    const wss = new WebSocketServer({ port });
-    console.log(`Serveur WebSocket démarré sur le port ${port}`);
-    return wss;
-}
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8080;
 
-// Lancement automatique si exécuté directement
-if (require.main === module) {
-    startServer(8080);
-}
+const server = new WebSocketServer();
+server.start(PORT);
