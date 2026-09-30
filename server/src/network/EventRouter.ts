@@ -47,7 +47,7 @@ export class EventRouter {
             }
           };
       }
-    } catch (error) {
+    } catch {
       return {
         event: "ERROR",
         data: {
