@@ -11,7 +11,7 @@ describe("NetworkManager", () => {
       send: mockSend,
       readyState: 1, // 1 signifie que la connexion est ouverte (WebSocket.OPEN)
       OPEN: 1,
-    })) as any;
+    })) as unknown as typeof WebSocket;
 
     // Prépare une instance toute neuve avant chaque test
     networkManager = new NetworkManager("ws://localhost:8080");
