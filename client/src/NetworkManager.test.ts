@@ -26,7 +26,7 @@ describe("NetworkManager", () => {
     networkManager.connect();
 
     // Vérifie que 'new WebSocket' a bien été appelé avec notre port
-    expect(global.WebSocket).toHaveBeenCalledWith("ws://localhost:8080");
+    expect(globalThis.WebSocket).toHaveBeenCalledWith("ws://localhost:8080");
   });
 
   it("doit envoyer un message JSON correctement formaté", () => {
