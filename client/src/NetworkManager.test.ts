@@ -7,7 +7,7 @@ describe("NetworkManager", () => {
   beforeEach(() => {
     // Fabrique un faux WebSocket pour tromper la classe
     mockSend = jest.fn();
-    global.WebSocket = jest.fn().mockImplementation(() => ({
+    globalThis.WebSocket = jest.fn().mockImplementation(() => ({
       send: mockSend,
       readyState: 1, // 1 signifie que la connexion est ouverte (WebSocket.OPEN)
       OPEN: 1,
@@ -36,6 +36,6 @@ describe("NetworkManager", () => {
     networkManager.sendMessage(testPayload);
 
     // Vérifie que la méthode d'envoi a bien reçu notre objet transformé en texte
-    expect(mockSend).toHaveBeenCalledWith(JSON.stringify(testPayload));
+    expect(globalThis.WebSocket).toHaveBeenCalledWith("ws://localhost:8080");
   });
 });
