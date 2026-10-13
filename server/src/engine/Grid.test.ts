@@ -12,8 +12,9 @@ describe('Grid Generation', () => {
   it('devrait générer une grille 2D correspondant à la largeur et hauteur', () => {
     const grid = new Grid(15, 13);
     const layout = grid.getLayout();
-    expect(layout.length).toBe(13);
-    expect(layout[0].length).toBe(15);
+    
+    expect(layout).toHaveLength(13);
+    expect(layout[0]).toHaveLength(15);
   });
 });
 
