@@ -93,6 +93,10 @@ jobs:
         working-directory: ./client
         run: npm ci
 
+      - name: Build du projet web (Vite)
+        working-directory: ./client
+        run: npm run build
+
       - name: Génération de l'exécutable Tauri
         uses: tauri-apps/tauri-action@v0
         env:
