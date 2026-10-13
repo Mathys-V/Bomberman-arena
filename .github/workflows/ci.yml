@@ -70,7 +70,7 @@ jobs:
 
   build-tauri:
     name: Build des exécutables Tauri
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [qualite-client] # Attend que les tests clients passent avant de build
     steps:
       - name: Checkout du dépôt
