@@ -8,7 +8,7 @@ networkManager.connect();
 
 // 2. Initialisation des contrôles
 // À chaque touche pressée, on envoie le message généré directement au serveur
-const inputManager = new InputManager((message) => {
+new InputManager((message) => {
   networkManager.sendMessage(message);
 });
 
