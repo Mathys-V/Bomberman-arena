@@ -1,3 +1,5 @@
+import { randomInt } from 'crypto';
+
 export class Grid {
   readonly width: number;
   readonly height: number;
@@ -27,8 +29,8 @@ export class Grid {
           return 0;
         }
 
-        // 4. Sur le reste de la carte, 60% de chance d'avoir une caisse (2), sinon du vide (0)
-        return Math.random() < 0.6 ? 2 : 0;
+        // 4. Sur le reste de la carte, 60% de chance d'avoir une caisse (2) via randomInt (sécurisé)
+        return randomInt(0, 100) < 60 ? 2 : 0;
       })
     );
   }
