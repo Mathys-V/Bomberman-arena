@@ -13,7 +13,7 @@ interface GameMessage {
 export class InputManager {
   // Le callback qui sera appelé à chaque touche pressée
   // Cela permet de découpler totalement cette classe du réseau !
-  private onMessageGenerated: (message: GameMessage) => void;
+  private readonly onMessageGenerated: (message: GameMessage) => void;
 
   constructor(onMessageGenerated: (message: GameMessage) => void) {
     this.onMessageGenerated = onMessageGenerated;
