@@ -1,13 +1,16 @@
 {
   "compilerOptions": {
-    "target": "es2022",
+    "target": "ES2022",
     "module": "commonjs",
+    "moduleResolution": "node",
     "esModuleInterop": true,
-    "types": ["node", "jest"],
     "strict": true,
     "skipLibCheck": true,
+    "types": ["jest", "node"],
+    "outDir": "dist",
+    "rootDir": ".",
     "sourceMap": true
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
