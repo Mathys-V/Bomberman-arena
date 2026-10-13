@@ -97,6 +97,12 @@ jobs:
         working-directory: ./client
         run: npm run build
 
+      - name: Initialisation manuelle de Tauri
+        working-directory: ./client
+        run: |
+          npx @tauri-apps/cli@v1 init --ci
+          sed -i 's/com.tauri.dev/com.bomberman.arena/g' src-tauri/tauri.conf.json
+
       - name: Génération de l'exécutable Tauri
         uses: tauri-apps/tauri-action@v0
         env:
