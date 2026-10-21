@@ -1,4 +1,4 @@
-import { randomInt } from 'crypto';
+import * as crypto from 'crypto';
 
 export class Grid {
   readonly width: number;
@@ -29,8 +29,11 @@ export class Grid {
           return 0;
         }
 
-        // 4. Sur le reste de la carte, 60% de chance d'avoir une caisse (2) via randomInt (sécurisé)
-        return randomInt(0, 100) < 60 ? 2 : 0;
+        // 4. Sur le reste de la carte, 60% de chance d'avoir une caisse (2) via crypto (sécurisé)
+        const array = new Uint32Array(1);
+        crypto.getRandomValues(array);
+        const isUnder60Percent = (array[0] / (0xFFFFFFFF + 1)) < 0.6;
+        return isUnder60Percent ? 2 : 0;
       })
     );
   }
