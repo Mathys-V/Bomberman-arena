@@ -6,7 +6,13 @@ const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
 const networkManager = new NetworkManager(wsUrl);
 networkManager.connect();
 
-// 2. Initialisation des contrôles
+//2. On branche l'écouteur pour recevoir les données du serveur
+networkManager.listen((data) => {
+  console.log("Données traitées dans le main :", data);
+  // Plus tard, on enverra ces données au moteur graphique (PixiJS) ici
+});
+
+// 3. Initialisation des contrôles
 // À chaque touche pressée, on envoie le message généré directement au serveur
 export const inputManager = new InputManager((message) => {
   networkManager.sendMessage(message);
