@@ -28,6 +28,11 @@ type ArenaTiles = Record<
   | "solid",
   Texture
 >;
+type ArenaLayers = {
+  floor: Container;
+  decor: Container;
+  dynamic: Container;
+};
 
 const gameBoard = document.querySelector<HTMLElement>("#game-board");
 if (!gameBoard) {
@@ -42,7 +47,7 @@ export const inputManager = new InputManager((message) => {
   networkManager.sendMessage(message);
 });
 
-const layers = {
+const layers: ArenaLayers = {
   floor: new Container(),
   decor: new Container(),
   dynamic: new Container(),
@@ -136,6 +141,60 @@ function placeTile(
   layer.addChild(sprite);
 }
 
+function drawGround(layers: ArenaLayers, tiles: ArenaTiles): void {
+  const ground = new TilingSprite({
+    texture: tiles.ground,
+    width: arenaWidth,
+    height: arenaHeight,
+  });
+  ground.tileScale.set(2, 2);
+  layers.floor.addChild(ground);
+}
+
+function getWallTexture(x: number, y: number, tiles: ArenaTiles): Texture {
+  if (x === 0 && y === 0) return tiles.limitsHG;
+  if (x === boardSize - 1 && y === 0) return tiles.limitsHD;
+  if (x === 0 && y === boardSize - 1) return tiles.limitsBG;
+  if (x === boardSize - 1 && y === boardSize - 1) return tiles.limitsBD;
+  if (y === 0 || y === boardSize - 1) return tiles.limitsabs;
+  if (x === 0 || x === boardSize - 1) return tiles.limitsord;
+  return tiles.solid;
+}
+
+function drawMap(layers: ArenaLayers, tiles: ArenaTiles): void {
+  for (let y = 0; y < map.length; y += 1) {
+    for (let x = 0; x < map[y].length; x += 1) {
+      const cell = map[y][x];
+      if (cell === "#") {
+        placeTile(layers.decor, getWallTexture(x, y, tiles), x, y);
+      } else if (cell === "B") {
+        placeTile(layers.decor, tiles.breakable, x, y);
+      }
+    }
+  }
+}
+
+function drawPlayers(app: Application, layers: ArenaLayers): void {
+  const player1 = new Graphics()
+    .roundRect(0, 0, tileSize * 0.7, tileSize * 0.7, 5)
+    .fill(0x4fc3f7);
+  const player2 = new Graphics()
+    .roundRect(0, 0, tileSize * 0.7, tileSize * 0.7, 5)
+    .fill(0xff6f61);
+  const player1Sprite = new Sprite(
+    app.renderer.generateTexture({ target: player1 }),
+  );
+  const player2Sprite = new Sprite(
+    app.renderer.generateTexture({ target: player2 }),
+  );
+  player1Sprite.position.set(tileSize + 4, tileSize + 4);
+  player2Sprite.position.set(
+    (boardSize - 2) * tileSize + 4,
+    (boardSize - 2) * tileSize + 4,
+  );
+  layers.dynamic.addChild(player1Sprite, player2Sprite);
+}
+
 const map = [
   "#############",
   "#...........#",
@@ -164,13 +223,22 @@ async function initArena(): Promise<void> {
   gameBoard.replaceChildren(app.canvas);
   app.stage.addChild(arenaContainer);
 
-  let tiles: ArenaTiles;
+  const tiles = await loadTilesetWithFallback(app);
+  drawGround(layers, tiles);
+  drawMap(layers, tiles);
+  drawPlayers(app, layers);
+
+  fitArenaToViewport(app);
+  window.addEventListener("resize", () => fitArenaToViewport(app));
+}
+
+async function loadTilesetWithFallback(app: Application): Promise<ArenaTiles> {
   try {
-    tiles = await loadTileset();
+    return await loadTileset();
   } catch (error) {
-    console.warn("ArenaAS.png non chargé, textures de secours utilisées.", error);
+    console.warn("ArenaAS.png failed to load; using fallback textures.", error);
     const fallback = createFallbackTile(app, 0x4d4f52);
-    tiles = {
+    return {
       ground: createFallbackTile(app, 0x2f7d4a),
       breakable: createFallbackTile(app, 0x9a5d2f),
       limitsabs: fallback,
@@ -182,42 +250,5 @@ async function initArena(): Promise<void> {
       solid: fallback,
     };
   }
-
-  const ground = new TilingSprite({
-    texture: tiles.ground,
-    width: arenaWidth,
-    height: arenaHeight,
-  });
-  ground.tileScale.set(2, 2);
-  layers.floor.addChild(ground);
-
-  for (let y = 0; y < map.length; y += 1) {
-    for (let x = 0; x < map[y].length; x += 1) {
-      const cell = map[y][x];
-      if (cell === "#") {
-        if (x === 0 && y === 0) placeTile(layers.decor, tiles.limitsHG, x, y);
-        else if (x === boardSize - 1 && y === 0) placeTile(layers.decor, tiles.limitsHD, x, y);
-        else if (x === 0 && y === boardSize - 1) placeTile(layers.decor, tiles.limitsBG, x, y);
-        else if (x === boardSize - 1 && y === boardSize - 1) placeTile(layers.decor, tiles.limitsBD, x, y);
-        else if (y === 0 || y === boardSize - 1) placeTile(layers.decor, tiles.limitsabs, x, y);
-        else if (x === 0 || x === boardSize - 1) placeTile(layers.decor, tiles.limitsord, x, y);
-        else placeTile(layers.decor, tiles.solid, x, y);
-      } else if (cell === "B") {
-        placeTile(layers.decor, tiles.breakable, x, y);
-      }
-    }
-  }
-
-  const player1 = new Graphics().roundRect(0, 0, tileSize * 0.7, tileSize * 0.7, 5).fill(0x4fc3f7);
-  const player2 = new Graphics().roundRect(0, 0, tileSize * 0.7, tileSize * 0.7, 5).fill(0xff6f61);
-  const player1Sprite = new Sprite(app.renderer.generateTexture({ target: player1 }));
-  const player2Sprite = new Sprite(app.renderer.generateTexture({ target: player2 }));
-  player1Sprite.position.set(tileSize + 4, tileSize + 4);
-  player2Sprite.position.set((boardSize - 2) * tileSize + 4, (boardSize - 2) * tileSize + 4);
-  layers.dynamic.addChild(player1Sprite, player2Sprite);
-
-  fitArenaToViewport(app);
-  window.addEventListener("resize", () => fitArenaToViewport(app));
 }
-
 void initArena();
