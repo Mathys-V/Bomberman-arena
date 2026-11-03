@@ -29,10 +29,12 @@ export class Bomb {
 
         // On calcule la croix en fonction du radius
         for (let i = 1; i <= this.radius; i++) {
-            tiles.push({ x: this.x + i, y: this.y }); // Droite
-            tiles.push({ x: this.x - i, y: this.y }); // Gauche
-            tiles.push({ x: this.x, y: this.y + i }); // Bas
-            tiles.push({ x: this.x, y: this.y - i }); // Haut
+            tiles.push(
+                { x: this.x + i, y: this.y }, // Droite
+                { x: this.x - i, y: this.y }, // Gauche
+                { x: this.x, y: this.y + i }, // Bas
+                { x: this.x, y: this.y - i }  // Haut
+            );
         }
 
         return tiles;

@@ -41,7 +41,7 @@ describe('Bomb Entity', () => {
         const tiles = bomb.getExplosionTiles();
 
         // Une croix de rayon 2 + le centre = 9 cases touchées
-        expect(tiles.length).toBe(9);
+        expect(tiles).toHaveLength(9);
         
         // Vérification de la présence de quelques cases clés
         expect(tiles).toContainEqual({ x: 5, y: 5 }); // Centre
