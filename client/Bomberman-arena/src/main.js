@@ -121,7 +121,7 @@ async function loadTileset() {
           tileSizeInAtlas,
         ),
       ),
-  
+
       solid: new PIXI.Texture(
         base,
         new PIXI.Rectangle(
@@ -132,6 +132,44 @@ async function loadTileset() {
         ),
       ),
     };
+
+    try {
+      const grassTexture = await PIXI.Assets.load(
+        new URL("./assets/GRASS+.png", import.meta.url).href,
+      );
+      tiles.ground = new PIXI.Texture(
+        grassTexture.baseTexture,
+        new PIXI.Rectangle(tileSizeInAtlas * 4, 4 * tileSizeInAtlas, tileSizeInAtlas, tileSizeInAtlas),
+      );
+    } catch (error) {
+      console.warn("GRASS+.png non chargé, sol de ArenaAS.png utilisé.", error);
+    }
+
+    try {
+      const solidrockWallTexture = await PIXI.Assets.load(
+        new URL("./assets/Tiled_Rock_Wall.png", import.meta.url).href,
+      );
+      const solidrockWallBase = solidrockWallTexture.baseTexture;
+
+      const weakrockWallTexture = await PIXI.Assets.load(
+        new URL("./assets/Wall_Rock_Moss.png", import.meta.url).href,
+      );
+      const weakrockWallBase = weakrockWallTexture.baseTexture;
+
+      tiles.solid = new PIXI.Texture(
+        solidrockWallBase,
+        new PIXI.Rectangle(0, 0, tileSize, tileSize),
+      );
+      tiles.breakable = new PIXI.Texture(
+        weakrockWallBase,
+        new PIXI.Rectangle(0, tileSize, tileSize, tileSize),
+      );
+    } catch (error) {
+      console.warn(
+        "Tiled_Rock_Wall.png non chargé, textures de mur de ArenaAS.png utilisées.",
+        error,
+      );
+    }
 
     if (
       tiles.ground.valid &&
@@ -246,10 +284,7 @@ async function initArena() {
           placeTile(layers.decor, limitsHDTile, abscisse, ordonnee);
         } else if (abscisse === 0 && ordonnee === boardSize - 1) {
           placeTile(layers.decor, limitsBGTile, abscisse, ordonnee);
-        } else if (
-          abscisse === boardSize - 1 &&
-          ordonnee === boardSize - 1
-        ) {
+        } else if (abscisse === boardSize - 1 && ordonnee === boardSize - 1) {
           placeTile(layers.decor, limitsBDTile, abscisse, ordonnee);
         } else if (ordonnee === 0 || ordonnee === boardSize - 1) {
           placeTile(layers.decor, limitsabsTile, abscisse, ordonnee);
