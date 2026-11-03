@@ -20,4 +20,23 @@ export class Bomb {
             onExplode();
         }, delayInMs);
     }
+    // Retourne un tableau des coordonnées (x,y) touchées par l'explosion en croix
+    public getExplosionTiles(): { x: number, y: number }[] {
+        const tiles: { x: number, y: number }[] = [];
+
+        // On inclut toujours le centre (la case de la bombe)
+        tiles.push({ x: this.x, y: this.y });
+
+        // On calcule la croix en fonction du radius
+        for (let i = 1; i <= this.radius; i++) {
+            tiles.push(
+                { x: this.x + i, y: this.y }, // Droite
+                { x: this.x - i, y: this.y }, // Gauche
+                { x: this.x, y: this.y + i }, // Bas
+                { x: this.x, y: this.y - i }  // Haut
+            );
+        }
+
+        return tiles;
+    }
 }
