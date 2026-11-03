@@ -41,4 +41,13 @@ export class Grid {
   getLayout(): number[][] {
     return this.layout;
   }
+
+  public isObstacle(x: number, y: number): boolean {
+    // Empêche de sortir des limites du tableau (hors de la carte)
+    if (y < 0 || y >= this.layout.length || x < 0 || x >= this.layout[0].length) {
+      return true;
+    }
+    // Considère tout ce qui n'est pas 0 (vide) comme un obstacle
+    return this.layout[y][x] !== 0;
+  }
 }
