@@ -111,3 +111,59 @@ La stratégie adoptée applique le modèle de la **Pyramide des Tests** pour éq
   - Affichage de l'arène de jeu et chargement des textures PixiJS.
   - Rendu initial des joueurs et des blocs de la grille.
   - Réactivité de l'affichage suite aux entrées clavier du joueur.
+
+
+---
+
+## 4. Environnement d'Exécution, Outillage & Intégration CI/CD
+
+### 4.1. Commandes de reproduction locale (Guide Évaluateur / Développeur)
+
+Afin de garantir la reproductibilité des tests sur n'importe quel poste de travail, les commandes normalisées sont les suivantes :
+
+```bash
+# 1. Tests Unitaires & Intégration Serveur (Node.js / Jest)
+cd server
+npm test
+
+# 2. Tests Unitaires Client Léger (Jest / jsdom)
+cd client
+npm test
+
+# 3. Vérification de la conformité du style et règles statiques (ESLint)
+cd server && npm run lint
+cd ../client && npm run lint
+
+# 4. Exécution du test de charge dynamique (k6)
+# Prérequis : Serveur démarré en arrière-plan via 'cd server && npm start'
+k6 run tests/load/websocket-stress.js
+```
+
+### 4.2. Pipeline d'Intégration Continue (GitHub Actions)
+
+Tous les scénarios de test automatisés sont intégrés dans le workflow `.github/workflows/ci.yml` et s'exécutent automatiquement à chaque proposition de Pull Request ou de Push vers les branches `develop` et `main` :
+
+1. **Job `qualite-serveur`** : installe les dépendances via `npm install`, applique les règles ESLint, puis exécute l'intégralité de la suite Jest backend. Un échec de test bloque immédiatement le pipeline.
+2. **Job `qualite-client`** : vérifie la compilation TypeScript, le linting et les tests Jest de l'interface client.
+3. **Job `analyse-sonarqube`** : déclenche le scanner SonarCloud sur l'historique complet pour vérifier le respect du Quality Gate (sécurité, maintenabilité, absence de bugs).
+4. **Job `build-tauri`** : compile l'application cliente et vérifie l'intégrité du binaire de bureau généré.
+
+---
+
+## 5. Critères d'Acceptation & Métriques de Qualité (Quality Gate)
+
+### 5.1. Critères d'entrée et de sortie (Definition of Done)
+
+Pour qu'une fonctionnalité ou un correctif soit accepté dans la branche d'intégration `develop` :
+- [x] **Succès des tests automatisés** : 100% des tests unitaires et d'intégration doivent être passants (aucun test ignoré ou en échec).
+- [x] **Conformité statique** : Zéro erreur de linting retournée par ESLint / Prettier.
+- [x] **Validation SonarCloud** : La Pull Request doit obligatoirement obtenir le statut **Quality Gate : PASSED**.
+- [x] **Double revue par les pairs** : Approbation formelle d'au moins 2 relecteurs, dont au moins 1 membre de l'équipe Qualité/DevOps.
+- [x] **Non-régression des performances** : En cas de modification réseau, la latence moyenne de handshake doit demeurer inférieure à 5 ms sous charge k6.
+
+### 5.2. Gestion des anomalies et processus Hotfix
+
+En cas de défaillance détectée par la CI ou lors des sessions de test de charge :
+1. **Isolation immédiate** : gel du merge de la PR concernée ou création d'une branche `hotfix/<nom-anomalie>` issue de `develop`.
+2. **Reproduction par un test (TDD)** : écriture préalable d'un cas de test unitaire ou d'intégration reproduisant fidèlement le bogue constaté.
+3. **Correction & vérification** : résolution de l'anomalie, validation locale complète de la suite Jest, puis réintégration via Pull Request dédiée.
