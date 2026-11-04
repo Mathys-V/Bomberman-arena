@@ -50,3 +50,5 @@ La reproductibilité des environnements est assurée par nos fichiers lock. Pour
 1. Tests unitaires (Jest) : Validation de la logique métier (dimensions de la grille, algorithme d'explosion).
 2. Tests E2E (Cypress) : Validation de l'interface utilisateur.
 3. Tests dynamiques (k6) : Un test de charge WebSocket a été réalisé sur le serveur Node.js. En simulant 30 joueurs simultanés (ramp-up sur 15s, plateau de 30s) spammant déplacements et bombes, le serveur a encaissé 100% des requêtes (144 sessions complètes, plus de 6700 messages échangés) avec une latence p95 de seulement 2.85ms, sans crasher l'Event Loop.
+
+*(Pour le détail exhaustif de la matrice des tests, des scénarios et de l'outillage CI/CD, consulter le [Plan de Test & Stratégie Qualité](PLAN_DE_TEST.md).)*
