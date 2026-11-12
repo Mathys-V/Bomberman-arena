@@ -12,7 +12,7 @@ Le projet **Bomberman Arena** est un jeu multijoueur en temps réel reposant sur
 2. **Valider le contrat d'interface réseau (Protocole WebSocket)** : vérifier la sérialisation, le routage et le traitement correct des messages JSON échangés entre clients et serveur.
 3. **Prouver la robustesse sous charge (Analyse Dynamique)** : démontrer la stabilité de l'Event Loop Node.js et des connexions concurrentes face à des montées en charge extrêmes.
 4. **Assurer l'expérience utilisateur de bout-en-bout** : certifier l'enchaînement fluide des actions utilisateur dans le client lourd.
-5. **Automatiser le contrôle qualité & packaging** : intégrer les tests et la validation de la conteneurisation Docker dans le pipeline CI/CD GitHub Actions pour empêcher toute régression avant chaque merge sur `develop` ou `main`.
+5. **Automatiser le contrôle qualité & packaging** : intégrer les tests, la mesure continue de couverture de code (LCOV) et la validation de la conteneurisation Docker dans le pipeline CI/CD GitHub Actions pour empêcher toute régression avant chaque merge sur `develop` ou `main`.
 
 ---
 
@@ -29,7 +29,7 @@ La stratégie adoptée applique le modèle de la **Pyramide des Tests** pour éq
      / & Charge  \   -> WebSocket (Jest + ws) & Stress (k6)
     /-------------\
    /   Unitaires   \ Tests Unitaires (Jest / Vitest)
-  /_________________\-> Logique métier Grid, Player, Bomb, Input
+  /_________________\-> Logique métier Grid, Player, Bomb, Input (Couverture LCOV)
 ```
 
 ### Répartition des responsabilités et outillage :
@@ -41,6 +41,7 @@ La stratégie adoptée applique le modèle de la **Pyramide des Tests** pour éq
 | **Tests d'Intégration** | Échanges WebSocket réels (Client <-> Serveur) | Jest + client `ws` | Pôle DevOps & Qualité | Chaque commit / PR (CI) |
 | **Tests de Charge / Dynamiques**| Tenue sous concurrence WebSocket (30 VUs) | k6 (Grafana k6) | Pôle DevOps (Mathys) | Jalons de release / CI ponctuelle |
 | **Tests Bout-en-Bout (E2E)** | Rendu interface & interactions utilisateur | Cypress | Pôle DevOps (Kilian) | Jalons de release / Pre-release |
+| **Mesure de Couverture** | Rapports LCOV (Backend & Frontend) | Jest `--coverage` -> SonarCloud | Pôle DevOps & Qualité | Chaque commit / PR (CI) |
 | **Validation Packaging** | Image Docker Serveur & docker-compose | Docker Buildx / Compose | Pôle DevOps & Qualité | Chaque commit / PR (CI) |
 
 ---
@@ -125,19 +126,27 @@ Afin de garantir la reproductibilité des tests sur n'importe quel poste de trav
 cd server
 npm test
 
-# 2. Tests Unitaires Client Léger (Jest / jsdom)
+# 2. Tests avec Couverture LCOV Serveur
+cd server
+npm run test:coverage
+
+# 3. Tests Unitaires Client Léger (Jest / jsdom)
 cd client
 npm test
 
-# 3. Vérification de la conformité du style et règles statiques (ESLint)
+# 4. Tests avec Couverture LCOV Client
+cd client
+npm run test:coverage
+
+# 5. Vérification de la conformité du style et règles statiques (ESLint)
 cd server && npm run lint
 cd ../client && npm run lint
 
-# 4. Exécution du test de charge dynamique (k6)
+# 6. Exécution du test de charge dynamique (k6)
 # Prérequis : Serveur démarré en arrière-plan via 'cd server && npm start'
 k6 run tests/load/websocket-stress.js
 
-# 5. Validation de la conteneurisation Docker Serveur
+# 7. Validation de la conteneurisation Docker Serveur
 docker compose config
 docker compose up --build -d
 ```
@@ -146,9 +155,9 @@ docker compose up --build -d
 
 Tous les scénarios de test et de validation de packaging sont intégrés dans le workflow `.github/workflows/ci.yml` et s'exécutent automatiquement à chaque proposition de Pull Request ou de Push vers les branches `develop` et `main` :
 
-1. **Job `qualite-serveur`** : installe les dépendances via `npm install`, applique les règles ESLint, puis exécute l'intégralité de la suite Jest backend. Un échec de test bloque immédiatement le pipeline.
-2. **Job `qualite-client`** : vérifie la compilation TypeScript, le linting et les tests Jest de l'interface client.
-3. **Job `analyse-sonarqube`** : déclenche le scanner SonarCloud sur l'historique complet pour vérifier le respect du Quality Gate (sécurité, maintenabilité, absence de bugs).
+1. **Job `qualite-serveur`** : installe les dépendances via `npm install`, applique les règles ESLint, puis exécute l'intégralité de la suite Jest backend avec génération du rapport de couverture LCOV (`npm run test:coverage`). Le rapport est sauvegardé comme artefact GitHub Actions.
+2. **Job `qualite-client`** : vérifie la compilation TypeScript, le linting et les tests Jest avec couverture LCOV de l'interface client, puis sauvegarde le rapport comme artefact.
+3. **Job `analyse-sonarqube`** : s'exécute après la fin des jobs de test, télécharge les artefacts de couverture LCOV serveur et client, et déclenche le scanner SonarCloud pour alimenter le Quality Gate avec les métriques réelles.
 4. **Job `build-docker-serveur`** : valide la construction de l'image Docker du serveur (`server/Dockerfile`) via Buildx et vérifie l'intégrité syntaxique du fichier `docker-compose.yml`.
 5. **Job `build-tauri`** : compile l'application cliente et vérifie l'intégrité du binaire de bureau généré.
 
@@ -160,6 +169,7 @@ Tous les scénarios de test et de validation de packaging sont intégrés dans l
 
 Pour qu'une fonctionnalité ou un correctif soit accepté dans la branche d'intégration `develop` :
 - [x] **Succès des tests automatisés** : 100% des tests unitaires et d'intégration doivent être passants (aucun test ignoré ou en échec).
+- [x] **Couverture de code Backend** : Le taux de couverture globale des lignes du backend doit dépasser 70% (actuellement mesuré à 74.22% sur les composants métier).
 - [x] **Conformité statique** : Zéro erreur de linting retournée par ESLint / Prettier.
 - [x] **Validation SonarCloud** : La Pull Request doit obligatoirement obtenir le statut **Quality Gate : PASSED**.
 - [x] **Packaging Serveur & Client au vert** : Le build Docker serveur et la compilation Tauri client doivent réussir sans avertissement bloquant.

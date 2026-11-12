@@ -53,15 +53,16 @@ docker compose down
   L'utilisation stricte de GitFlow (branches feature, develop) avec protection de branche a très bien fonctionné. L'obligation d'obtenir 2 approbations (reviews) avant chaque merge a considérablement réduit la dette technique.
 
 - Usine logicielle et CI/CD (GitHub Actions) :
-  L'automatisation via GitHub Actions (Lint, Tests, Build Tauri, Validation Docker) a permis de sécuriser les livraisons. La conteneurisation du serveur est testée et validée à chaque PR grâce au job `build-docker-serveur` qui vérifie le Dockerfile et la configuration Docker Compose. Nous avons également surmonté les défis liés à `npm ci` via des branches hotfix dédiées pour la synchronisation des lockfiles.
+  L'automatisation via GitHub Actions (Lint, Tests avec couverture, Build Tauri, Validation Docker) a permis de sécuriser les livraisons. La conteneurisation du serveur est testée et validée à chaque PR grâce au job `build-docker-serveur` qui vérifie le Dockerfile et la configuration Docker Compose. Nous avons également surmonté les défis liés à `npm ci` via des branches hotfix dédiées pour la synchronisation des lockfiles.
 
-- Analyse statique (SonarQube) :
+- Analyse statique & Couverture de code (SonarQube) :
   SonarCloud s'est révélé redoutable pour maintenir la qualité du code. Il a notamment permis d'identifier et de corriger une vulnérabilité de sécurité sur la génération aléatoire de la grille (remplacement de Math.random par node:crypto), ainsi que d'optimiser l'allocation de la mémoire (push multiples).
+  Grâce à la génération continue des rapports LCOV via Jest et leur transfert automatisé à SonarCloud, le moteur de jeu backend atteint un taux de couverture de code de 74.22% (100% sur Bomb.ts, 86.95% sur Grid.ts, 88.88% sur EventRouter.ts).
 
 - Stratégie de Tests & Performances :
   Le projet est couvert par trois niveaux de tests :
 
-1. Tests unitaires (Jest) : Validation de la logique métier (dimensions de la grille, algorithme d'explosion).
+1. Tests unitaires (Jest) : Validation de la logique métier (dimensions de la grille, algorithme d'explosion, entité joueur).
 2. Tests E2E (Cypress) : Validation de l'interface utilisateur.
 3. Tests dynamiques (k6) : Un test de charge WebSocket a été réalisé sur le serveur Node.js. En simulant 30 joueurs simultanés (ramp-up sur 15s, plateau de 30s) spammant déplacements et bombes, le serveur a encaissé 100% des requêtes (144 sessions complètes, plus de 6700 messages échangés) avec une latence p95 de seulement 2.85ms, sans crasher l'Event Loop.
 

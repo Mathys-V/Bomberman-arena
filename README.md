@@ -6,7 +6,7 @@ Bienvenue sur Bomberman Arena, un jeu multijoueur en temps réel basé sur une a
 
 - Client : TypeScript, Vite, PixiJS (Moteur graphique), Tauri (Exécutables de bureau).
 - Serveur : Node.js, TypeScript, WebSockets (ws), Docker.
-- DevOps & Qualité : GitHub Actions, SonarCloud, Docker Compose, Jest (Tests unitaires), Cypress (Tests E2E), k6 (Tests de charge).
+- DevOps & Qualité : GitHub Actions, SonarCloud, Docker Compose, Jest (Tests unitaires & Couverture LCOV), Cypress (Tests E2E), k6 (Tests de charge).
 
 ## Démarrage rapide
 
@@ -53,6 +53,7 @@ docker compose down
 ## Exécution des Tests
 
 - **Tests Unitaires & Intégration Serveur** : `cd server && npm test`
+- **Tests avec Couverture LCOV (Backend)** : `cd server && npm run test:coverage`
 - **Tests Unitaires Client Léger** : `cd client && npm test`
 - **Analyse Dynamique & Test de Charge** : `k6 run tests/load/websocket-stress.js`
 - **Validation Docker & Compose** : `docker compose config`
