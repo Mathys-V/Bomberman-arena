@@ -1,18 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bomberman Arena</title>
+    <meta
+      name="description"
+      content="Entrez dans l'arène de Bomberman Arena et préparez-vous à jouer."
+    />
+    <title>Bomberman Arena — À vous de jouer</title>
   </head>
   <body>
-    <main class="game-shell">
-      <h1>Bomberman Arena</h1>
-      <div
-        id="game-board"
-        class="game-board"
-        aria-label="Carte de jeu Bomberman"
-      ></div>
+    <main>
+      <section
+        id="home-screen"
+        class="home-screen"
+        aria-labelledby="page-title"
+      >
+        <div class="hero">
+          <div class="hero-copy">
+            <div class="title-row">
+              <h1 id="page-title">
+                Bomberman<br /><span>Arena</span>
+              </h1>
+              <span class="title-character" aria-hidden="true"></span>
+            </div>
+
+            <button id="play-button" class="play-button" type="button">
+              <span>Jouer</span>
+              <span class="play-arrow" aria-hidden="true">→</span>
+            </button>
+            <output id="launch-status" class="launch-status" aria-live="polite"></output>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="game-screen"
+        class="game-screen"
+        aria-label="Partie Bomberman"
+        hidden
+      >
+        <div
+          id="game-board"
+          class="game-board"
+          aria-label="Carte de jeu Bomberman"
+        ></div>
+      </section>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
