@@ -390,7 +390,7 @@ playButton.addEventListener("click", async () => {
 
   playButton.disabled = true;
   playButton.querySelector("span")!.textContent = "Chargement…";
-  launchStatus.removeAttribute("data-error");
+  delete launchStatus.dataset.error;
   launchStatus.textContent = "Préparation de l’arène…";
 
   try {

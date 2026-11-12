@@ -13,10 +13,6 @@
   box-sizing: border-box;
 }
 
-[hidden] {
-  display: none !important;
-}
-
 html,
 body {
   width: 100%;
@@ -40,6 +36,10 @@ body {
   background:
     linear-gradient(90deg, rgb(5 8 18 / 64%), rgb(5 8 18 / 22%) 72%),
     url("./assets/homeBackground.png") center / cover no-repeat;
+}
+
+.home-screen[hidden] {
+  display: none;
 }
 
 .home-screen::before {
@@ -192,10 +192,7 @@ canvas {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
+  .play-button {
+    transition-duration: 0.01ms;
   }
 }
