@@ -12,10 +12,20 @@ import { InputManager } from "./InputManager";
 import { NetworkManager } from "./NetworkManager";
 import "./styles.css";
 
+// -----------------------------------------------------------------------------
+// Configuration et types
+// -----------------------------------------------------------------------------
+
 const boardSize = 13;
 const tileSize = 32;
 const arenaWidth = boardSize * tileSize;
 const arenaHeight = boardSize * tileSize;
+const playerScale = 1.69;
+const playerMoveDuration = 140;
+const playerFrameDuration = 75;
+
+type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
+
 type ArenaTiles = Record<
   | "ground"
   | "breakable"
@@ -28,51 +38,81 @@ type ArenaTiles = Record<
   | "solid",
   Texture
 >;
+
 type ArenaLayers = {
   floor: Container;
   decor: Container;
   dynamic: Container;
 };
 
+const map = [
+  "#############",
+  "#...........#",
+  "#.B.B.B.B...#",
+  "#...........#",
+  "#...#...#...#",
+  "#..B...B....#",
+  "#...........#",
+  "#....#......#",
+  "#..B...B....#",
+  "#...........#",
+  "#...#...#...#",
+  "#...........#",
+  "#############",
+];
+
+// -----------------------------------------------------------------------------
+// Références à la page, réseau et contrôles
+// -----------------------------------------------------------------------------
+
 const gameBoard = document.querySelector<HTMLElement>("#game-board");
 if (!gameBoard) {
   throw new Error("#game-board introuvable");
 }
 
-const networkManager = new NetworkManager(
-  import.meta.env.VITE_WS_URL || "ws://localhost:8080",
-);
-networkManager.connect();
-//2. On branche l'écouteur pour recevoir les données du serveur
-networkManager.listen((data) => {
-  console.log("Données traitées dans le main :", data);
-  // Plus tard, on enverra ces données au moteur graphique (PixiJS) ici
-});
+const homeScreen = document.querySelector<HTMLElement>("#home-screen");
+const gameScreen = document.querySelector<HTMLElement>("#game-screen");
+const playButton = document.querySelector<HTMLButtonElement>("#play-button");
+const launchStatus = document.querySelector<HTMLElement>("#launch-status");
+if (!homeScreen || !gameScreen || !playButton || !launchStatus) {
+  throw new Error("Éléments de navigation introuvables");
+}
 
-// 3. Initialisation des contrôles
-// À chaque touche pressée, on envoie le message généré directement au serveur
-export const inputManager = new InputManager((message) => {
-  networkManager.sendMessage(message);
-});
+let movePlayer: (direction: Direction) => void = () => {};
+let gameStarted = false;
+
+// -----------------------------------------------------------------------------
+// Couches graphiques
+// -----------------------------------------------------------------------------
 
 const layers: ArenaLayers = {
   floor: new Container(),
   decor: new Container(),
   dynamic: new Container(),
 };
+
 const arenaContainer = new Container();
 arenaContainer.addChild(layers.floor, layers.decor, layers.dynamic);
 
-function createFallbackTile(app: Application, color: number): Texture {
-  const graphic = new Graphics().rect(0, 0, 8, 8).fill(color);
-  return app.renderer.generateTexture({ target: graphic });
-}
+// -----------------------------------------------------------------------------
+// Chargement et préparation des textures
+// -----------------------------------------------------------------------------
 
-function cropTexture(texture: Texture, x: number, y: number, size: number): Texture {
+function cropTexture(
+  texture: Texture,
+  x: number,
+  y: number,
+  size: number,
+): Texture {
   return new Texture({
     source: texture.source,
     frame: new Rectangle(x, y, size, size),
   });
+}
+
+function createFallbackTile(app: Application, color: number): Texture {
+  const graphic = new Graphics().rect(0, 0, 8, 8).fill(color);
+  return app.renderer.generateTexture({ target: graphic });
 }
 
 async function loadTileset(): Promise<ArenaTiles> {
@@ -80,7 +120,7 @@ async function loadTileset(): Promise<ArenaTiles> {
   const atlas = await Assets.load<Texture>(
     new URL("./assets/ArenaAS.png", import.meta.url).href,
   );
-  const tiles = {
+  const tiles: ArenaTiles = {
     ground: cropTexture(atlas, 16, 16, atlasTileSize),
     breakable: cropTexture(atlas, 48, 48, atlasTileSize),
     limitsabs: cropTexture(atlas, 16, 32, atlasTileSize),
@@ -96,7 +136,6 @@ async function loadTileset(): Promise<ArenaTiles> {
     const grass = await Assets.load<Texture>(
       new URL("./assets/GRASS+.png", import.meta.url).href,
     );
-    // Tuile d'herbe vert foncé, située sous la tuile en haut à gauche.
     tiles.ground = cropTexture(grass, 0, atlasTileSize, atlasTileSize);
   } catch (error) {
     console.warn("GRASS+.png non chargé, sol de ArenaAS.png utilisé.", error);
@@ -121,125 +160,6 @@ async function loadTileset(): Promise<ArenaTiles> {
   return tiles;
 }
 
-function fitArenaToViewport(app: Application): void {
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const padding = 40;
-  const scale = Math.min(
-    (viewportWidth - padding) / arenaWidth,
-    (viewportHeight - padding) / arenaHeight,
-  );
-
-  app.renderer.resize(viewportWidth, viewportHeight);
-  arenaContainer.scale.set(scale);
-  arenaContainer.x = (viewportWidth - arenaWidth * scale) / 2;
-  arenaContainer.y = (viewportHeight - arenaHeight * scale) / 2;
-}
-
-function placeTile(
-  layer: Container,
-  texture: Texture,
-  gridX: number,
-  gridY: number,
-): void {
-  const sprite = new Sprite(texture);
-  sprite.position.set(gridX * tileSize, gridY * tileSize);
-  sprite.width = tileSize;
-  sprite.height = tileSize;
-  layer.addChild(sprite);
-}
-
-function drawGround(layers: ArenaLayers, tiles: ArenaTiles): void {
-  const ground = new TilingSprite({
-    texture: tiles.ground,
-    width: arenaWidth,
-    height: arenaHeight,
-  });
-  ground.tileScale.set(2, 2);
-  layers.floor.addChild(ground);
-}
-
-function getWallTexture(x: number, y: number, tiles: ArenaTiles): Texture {
-  if (x === 0 && y === 0) return tiles.limitsHG;
-  if (x === boardSize - 1 && y === 0) return tiles.limitsHD;
-  if (x === 0 && y === boardSize - 1) return tiles.limitsBG;
-  if (x === boardSize - 1 && y === boardSize - 1) return tiles.limitsBD;
-  if (y === 0 || y === boardSize - 1) return tiles.limitsabs;
-  if (x === 0 || x === boardSize - 1) return tiles.limitsord;
-  return tiles.solid;
-}
-
-function drawMap(layers: ArenaLayers, tiles: ArenaTiles): void {
-  for (let y = 0; y < map.length; y += 1) {
-    for (let x = 0; x < map[y].length; x += 1) {
-      const cell = map[y][x];
-      if (cell === "#") {
-        placeTile(layers.decor, getWallTexture(x, y, tiles), x, y);
-      } else if (cell === "B") {
-        placeTile(layers.decor, tiles.breakable, x, y);
-      }
-    }
-  }
-}
-
-function drawPlayers(app: Application, layers: ArenaLayers): void {
-  const player1 = new Graphics()
-    .roundRect(0, 0, tileSize * 0.7, tileSize * 0.7, 5)
-    .fill(0x4fc3f7);
-  const player2 = new Graphics()
-    .roundRect(0, 0, tileSize * 0.7, tileSize * 0.7, 5)
-    .fill(0xff6f61);
-  const player1Sprite = new Sprite(
-    app.renderer.generateTexture({ target: player1 }),
-  );
-  const player2Sprite = new Sprite(
-    app.renderer.generateTexture({ target: player2 }),
-  );
-  player1Sprite.position.set(tileSize + 4, tileSize + 4);
-  player2Sprite.position.set(
-    (boardSize - 2) * tileSize + 4,
-    (boardSize - 2) * tileSize + 4,
-  );
-  layers.dynamic.addChild(player1Sprite, player2Sprite);
-}
-
-const map = [
-  "#############",
-  "#...........#",
-  "#.B.B.B.B...#",
-  "#...........#",
-  "#...#...#...#",
-  "#..B...B....#",
-  "#...........#",
-  "#....#......#",
-  "#..B...B....#",
-  "#...........#",
-  "#...#...#...#",
-  "#...........#",
-  "#############",
-];
-
-async function initArena(): Promise<void> {
-  const app = new Application();
-  await app.init({
-    resizeTo: window,
-    background: 0x0d1620,
-    antialias: false,
-    resolution: window.devicePixelRatio || 1,
-    autoDensity: true,
-  });
-  gameBoard.replaceChildren(app.canvas);
-  app.stage.addChild(arenaContainer);
-
-  const tiles = await loadTilesetWithFallback(app);
-  drawGround(layers, tiles);
-  drawMap(layers, tiles);
-  drawPlayers(app, layers);
-
-  fitArenaToViewport(app);
-  window.addEventListener("resize", () => fitArenaToViewport(app));
-}
-
 async function loadTilesetWithFallback(app: Application): Promise<ArenaTiles> {
   try {
     return await loadTileset();
@@ -259,4 +179,245 @@ async function loadTilesetWithFallback(app: Application): Promise<ArenaTiles> {
     };
   }
 }
-void initArena();
+
+async function loadPlayerFrames(): Promise<Texture[]> {
+  const walkSheet = await Assets.load<Texture>(
+    new URL("./assets/BL walk.png", import.meta.url).href,
+  );
+  const frameSize = walkSheet.height;
+
+  return Array.from({ length: 12 }, (_, index) =>
+    cropTexture(walkSheet, index * frameSize, 0, frameSize),
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Dessin du terrain et de la carte
+// -----------------------------------------------------------------------------
+
+function placeTile(
+  layer: Container,
+  texture: Texture,
+  gridX: number,
+  gridY: number,
+): void {
+  const sprite = new Sprite(texture);
+  sprite.position.set(gridX * tileSize, gridY * tileSize);
+  sprite.width = tileSize;
+  sprite.height = tileSize;
+  layer.addChild(sprite);
+}
+
+function drawGround(): void {
+  const ground = new TilingSprite({
+    texture: currentTiles.ground,
+    width: arenaWidth,
+    height: arenaHeight,
+  });
+  ground.tileScale.set(2, 2);
+  layers.floor.addChild(ground);
+}
+
+function getWallTexture(x: number, y: number): Texture {
+  if (x === 0 && y === 0) return currentTiles.limitsHG;
+  if (x === boardSize - 1 && y === 0) return currentTiles.limitsHD;
+  if (x === 0 && y === boardSize - 1) return currentTiles.limitsBG;
+  if (x === boardSize - 1 && y === boardSize - 1) return currentTiles.limitsBD;
+  if (y === 0 || y === boardSize - 1) return currentTiles.limitsabs;
+  if (x === 0 || x === boardSize - 1) return currentTiles.limitsord;
+  return currentTiles.solid;
+}
+
+let currentTiles: ArenaTiles;
+
+function drawMap(): void {
+  for (let y = 0; y < map.length; y += 1) {
+    for (let x = 0; x < map[y].length; x += 1) {
+      const cell = map[y][x];
+
+      if (cell === "#") {
+        placeTile(layers.decor, getWallTexture(x, y), x, y);
+      } else if (cell === "B") {
+        placeTile(layers.decor, currentTiles.breakable, x, y);
+      }
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Joueurs et déplacements
+// -----------------------------------------------------------------------------
+
+async function loadSecondPlayerTexture(): Promise<Texture> {
+  const walkSheet = await Assets.load<Texture>(
+    new URL("./assets/BL walk 2.png", import.meta.url).href,
+  );
+  const frameSize = walkSheet.height;
+  return cropTexture(walkSheet, frameSize, 0, frameSize);
+}
+
+function setupPlayerMovement(
+  app: Application,
+  sprite: Sprite,
+  walkFrames: Texture[],
+  playerInset: number,
+): void {
+  let gridX = 1;
+  let gridY = 1;
+  let moving = false;
+  let elapsed = 0;
+  let animationTime = 0;
+  let startX = tileSize - playerInset;
+  let startY = tileSize - playerInset;
+  let targetX = startX;
+  let targetY = startY;
+  let frameBase = 0;
+
+  const directionOffsets: Record<Direction, [number, number]> = {
+    UP: [0, -1],
+    DOWN: [0, 1],
+    LEFT: [-1, 0],
+    RIGHT: [1, 0],
+  };
+  const directionFrameBase: Record<Direction, number> = {
+    DOWN: 0,
+    UP: 3,
+    LEFT: 6,
+    RIGHT: 9,
+  };
+
+  movePlayer = (direction) => {
+    if (moving) return;
+
+    const [dx, dy] = directionOffsets[direction];
+    const nextX = gridX + dx;
+    const nextY = gridY + dy;
+    if (map[nextY]?.[nextX] !== ".") return;
+
+    gridX = nextX;
+    gridY = nextY;
+    startX = sprite.x;
+    startY = sprite.y;
+    targetX = gridX * tileSize - playerInset;
+    targetY = gridY * tileSize - playerInset;
+    elapsed = 0;
+    moving = true;
+    frameBase = directionFrameBase[direction];
+  };
+
+  app.ticker.add((ticker) => {
+    if (!moving) return;
+
+    elapsed += ticker.deltaMS;
+    animationTime += ticker.deltaMS;
+    const progress = Math.min(elapsed / playerMoveDuration, 1);
+    sprite.position.set(
+      startX + (targetX - startX) * progress,
+      startY + (targetY - startY) * progress,
+    );
+    const frameIndex = Math.floor(animationTime / playerFrameDuration) % 3;
+    sprite.texture = walkFrames[frameBase + frameIndex];
+
+    if (progress === 1) {
+      moving = false;
+      sprite.texture = walkFrames[frameBase];
+    }
+  });
+}
+
+async function drawPlayers(app: Application): Promise<void> {
+  const walkFrames = await loadPlayerFrames();
+  const playerSize = tileSize * playerScale;
+  const playerInset = (playerSize - tileSize) / 2;
+  const player1Sprite = new Sprite(walkFrames[1]);
+  player1Sprite.width = playerSize;
+  player1Sprite.height = playerSize;
+  player1Sprite.position.set(tileSize - playerInset, tileSize - playerInset);
+
+  const player2Sprite = new Sprite(await loadSecondPlayerTexture());
+  player2Sprite.width = playerSize;
+  player2Sprite.height = playerSize;
+  player2Sprite.position.set(
+    (boardSize - 2) * tileSize - playerInset,
+    (boardSize - 2) * tileSize - playerInset,
+  );
+
+  layers.dynamic.addChild(player1Sprite, player2Sprite);
+  setupPlayerMovement(app, player1Sprite, walkFrames, playerInset);
+}
+
+// -----------------------------------------------------------------------------
+// Adaptation à la fenêtre et démarrage
+// -----------------------------------------------------------------------------
+
+function fitArenaToViewport(app: Application): void {
+  const padding = 40;
+  const scale = Math.min(
+    (window.innerWidth - padding) / arenaWidth,
+    (window.innerHeight - padding) / arenaHeight,
+  );
+
+  app.renderer.resize(window.innerWidth, window.innerHeight);
+  arenaContainer.scale.set(scale);
+  arenaContainer.x = (window.innerWidth - arenaWidth * scale) / 2;
+  arenaContainer.y = (window.innerHeight - arenaHeight * scale) / 2;
+}
+
+async function initArena(): Promise<void> {
+  const app = new Application();
+  await app.init({
+    resizeTo: window,
+    background: 0x0d1620,
+    antialias: false,
+    resolution: window.devicePixelRatio || 1,
+    autoDensity: true,
+  });
+
+  gameBoard!.replaceChildren(app.canvas);
+  app.stage.addChild(arenaContainer);
+
+  currentTiles = await loadTilesetWithFallback(app);
+  drawGround();
+  drawMap();
+  await drawPlayers(app);
+
+  fitArenaToViewport(app);
+  window.addEventListener("resize", () => fitArenaToViewport(app));
+}
+
+playButton.addEventListener("click", async () => {
+  if (gameStarted) return;
+
+  playButton.disabled = true;
+  playButton.querySelector("span")!.textContent = "Chargement…";
+  delete launchStatus.dataset.error;
+  launchStatus.textContent = "Préparation de l’arène…";
+
+  try {
+    await initArena();
+    const networkManager = new NetworkManager(
+      import.meta.env.VITE_WS_URL || "ws://localhost:8080",
+    );
+    networkManager.connect();
+    networkManager.listen((data) => {
+      console.log("Données traitées dans le main :", data);
+    });
+    new InputManager((message) => {
+      networkManager.sendMessage(message);
+
+      const direction = message.payload.direction;
+      if (direction) movePlayer(direction);
+    });
+
+    gameStarted = true;
+    homeScreen.hidden = true;
+    gameScreen.hidden = false;
+  } catch (error) {
+    console.error("Impossible de démarrer la partie.", error);
+    playButton.disabled = false;
+    playButton.querySelector("span")!.textContent = "Jouer";
+    launchStatus.dataset.error = "true";
+    launchStatus.textContent =
+      "Le jeu n’a pas pu démarrer. Vérifiez le chargement puis réessayez.";
+  }
+});
