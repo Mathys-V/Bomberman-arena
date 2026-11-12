@@ -14,24 +14,38 @@ Les communications s'effectuent en temps réel via le protocole WebSocket (port 
 
 Messages envoyés par le Client vers le Serveur :
 
-- Déplacement : { "type": "PLAYER_MOVE", "payload": { "direction": "UP" } }
-- Poser une bombe : { "type": "PLACE_BOMB", "payload": {} }
+- Déplacement : `{ "type": "PLAYER_MOVE", "payload": { "direction": "UP" } }`
+- Poser une bombe : `{ "type": "PLACE_BOMB", "payload": {} }`
 
 Messages envoyés par le Serveur vers le Client :
 
-- Mise à jour globale : { "type": "GAME_STATE", "payload": { "players": [...], "grid": [...] } }
-- Déconnexion : { "type": "PLAYER_DISCONNECT", "payload": { "playerId": "1234" } }
+- Mise à jour globale : `{ "type": "GAME_STATE", "payload": { "players": [...], "grid": [...] } }`
+- Déconnexion : `{ "type": "PLAYER_DISCONNECT", "payload": { "playerId": "1234" } }`
 
 ## 3. Guide de Déploiement et d'Exécution
 
-Prérequis : Node.js (v18+) et npm.
+Prérequis : Node.js (v18+) et npm (ou Docker pour le serveur).
 La reproductibilité des environnements est assurée par nos fichiers lock. Pour déployer le projet :
 
+### 3.1. Démarrage Local Standard
 1. Cloner le dépôt et se rendre à la racine.
-2. Synchroniser l'environnement Serveur : cd server puis npm ci
-3. Synchroniser l'environnement Client : cd client puis npm ci
-4. Démarrer le backend : npm start (depuis le dossier server)
-5. Démarrer le frontend : npm run dev (depuis le dossier client)
+2. Synchroniser l'environnement Serveur : `cd server && npm ci`
+3. Synchroniser l'environnement Client : `cd client && npm ci`
+4. Démarrer le backend : `npm start` (depuis le dossier `server`)
+5. Démarrer le frontend : `npm run dev` (depuis le dossier `client`)
+
+### 3.2. Démarrage Conteneurisé (Docker Serveur)
+Conformément au sujet, seul le serveur est conteneurisé (le client ne doit pas l'être) :
+```bash
+# Démarrage du serveur isolé sur le port 8080
+docker compose up --build -d
+
+# Visualisation des flux temps réel
+docker compose logs -f bomberman-server
+
+# Arrêt et nettoyage
+docker compose down
+```
 
 ## 4. Bilan Qualitatif (Post-Mortem)
 
@@ -39,7 +53,7 @@ La reproductibilité des environnements est assurée par nos fichiers lock. Pour
   L'utilisation stricte de GitFlow (branches feature, develop) avec protection de branche a très bien fonctionné. L'obligation d'obtenir 2 approbations (reviews) avant chaque merge a considérablement réduit la dette technique.
 
 - Usine logicielle et CI/CD (GitHub Actions) :
-  L'automatisation via GitHub Actions (Lint, Tests, Build Tauri) a permis de sécuriser les livraisons. Nous avons cependant rencontré un défi avec la commande "npm ci" : toute désynchronisation entre package.json et package-lock.json faisait échouer le pipeline, ce qui nous a forcés à adopter une rigueur stricte sur la gestion des dépendances (via des branches hotfix dédiées).
+  L'automatisation via GitHub Actions (Lint, Tests, Build Tauri, Validation Docker) a permis de sécuriser les livraisons. La conteneurisation du serveur est testée et validée à chaque PR grâce au job `build-docker-serveur` qui vérifie le Dockerfile et la configuration Docker Compose. Nous avons également surmonté les défis liés à `npm ci` via des branches hotfix dédiées pour la synchronisation des lockfiles.
 
 - Analyse statique (SonarQube) :
   SonarCloud s'est révélé redoutable pour maintenir la qualité du code. Il a notamment permis d'identifier et de corriger une vulnérabilité de sécurité sur la génération aléatoire de la grille (remplacement de Math.random par node:crypto), ainsi que d'optimiser l'allocation de la mémoire (push multiples).
@@ -50,3 +64,5 @@ La reproductibilité des environnements est assurée par nos fichiers lock. Pour
 1. Tests unitaires (Jest) : Validation de la logique métier (dimensions de la grille, algorithme d'explosion).
 2. Tests E2E (Cypress) : Validation de l'interface utilisateur.
 3. Tests dynamiques (k6) : Un test de charge WebSocket a été réalisé sur le serveur Node.js. En simulant 30 joueurs simultanés (ramp-up sur 15s, plateau de 30s) spammant déplacements et bombes, le serveur a encaissé 100% des requêtes (144 sessions complètes, plus de 6700 messages échangés) avec une latence p95 de seulement 2.85ms, sans crasher l'Event Loop.
+
+*(Pour le détail exhaustif de la matrice des tests, des scénarios et de l'outillage CI/CD, consulter le [Plan de Test & Stratégie Qualité](PLAN_DE_TEST.md).)*
