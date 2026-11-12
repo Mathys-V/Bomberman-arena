@@ -70,22 +70,16 @@ if (!gameBoard) {
   throw new Error("#game-board introuvable");
 }
 
-const networkManager = new NetworkManager(
-  import.meta.env.VITE_WS_URL || "ws://localhost:8080",
-);
-networkManager.connect();
-networkManager.listen((data) => {
-  console.log("Données traitées dans le main :", data);
-});
+const homeScreen = document.querySelector<HTMLElement>("#home-screen");
+const gameScreen = document.querySelector<HTMLElement>("#game-screen");
+const playButton = document.querySelector<HTMLButtonElement>("#play-button");
+const launchStatus = document.querySelector<HTMLElement>("#launch-status");
+if (!homeScreen || !gameScreen || !playButton || !launchStatus) {
+  throw new Error("Éléments de navigation introuvables");
+}
 
 let movePlayer: (direction: Direction) => void = () => {};
-
-export const inputManager = new InputManager((message) => {
-  networkManager.sendMessage(message);
-
-  const direction = message.payload.direction;
-  if (direction) movePlayer(direction);
-});
+let gameStarted = false;
 
 // -----------------------------------------------------------------------------
 // Couches graphiques
@@ -254,16 +248,12 @@ function drawMap(): void {
 // Joueurs et déplacements
 // -----------------------------------------------------------------------------
 
-function drawSecondPlayer(app: Application): Sprite {
-  const player = new Graphics()
-    .roundRect(0, 0, tileSize * 0.7, tileSize * 0.7, 5)
-    .fill(0xff6f61);
-  const sprite = new Sprite(app.renderer.generateTexture({ target: player }));
-  sprite.position.set(
-    (boardSize - 2) * tileSize + 4,
-    (boardSize - 2) * tileSize + 4,
+async function loadSecondPlayerTexture(): Promise<Texture> {
+  const walkSheet = await Assets.load<Texture>(
+    new URL("./assets/BL walk 2.png", import.meta.url).href,
   );
-  return sprite;
+  const frameSize = walkSheet.height;
+  return cropTexture(walkSheet, frameSize, 0, frameSize);
 }
 
 function setupPlayerMovement(
@@ -344,7 +334,15 @@ async function drawPlayers(app: Application): Promise<void> {
   player1Sprite.height = playerSize;
   player1Sprite.position.set(tileSize - playerInset, tileSize - playerInset);
 
-  layers.dynamic.addChild(player1Sprite, drawSecondPlayer(app));
+  const player2Sprite = new Sprite(await loadSecondPlayerTexture());
+  player2Sprite.width = playerSize;
+  player2Sprite.height = playerSize;
+  player2Sprite.position.set(
+    (boardSize - 2) * tileSize - playerInset,
+    (boardSize - 2) * tileSize - playerInset,
+  );
+
+  layers.dynamic.addChild(player1Sprite, player2Sprite);
   setupPlayerMovement(app, player1Sprite, walkFrames, playerInset);
 }
 
@@ -387,4 +385,39 @@ async function initArena(): Promise<void> {
   window.addEventListener("resize", () => fitArenaToViewport(app));
 }
 
-void initArena();
+playButton.addEventListener("click", async () => {
+  if (gameStarted) return;
+
+  playButton.disabled = true;
+  playButton.querySelector("span")!.textContent = "Chargement…";
+  launchStatus.removeAttribute("data-error");
+  launchStatus.textContent = "Préparation de l’arène…";
+
+  try {
+    await initArena();
+    const networkManager = new NetworkManager(
+      import.meta.env.VITE_WS_URL || "ws://localhost:8080",
+    );
+    networkManager.connect();
+    networkManager.listen((data) => {
+      console.log("Données traitées dans le main :", data);
+    });
+    new InputManager((message) => {
+      networkManager.sendMessage(message);
+
+      const direction = message.payload.direction;
+      if (direction) movePlayer(direction);
+    });
+
+    gameStarted = true;
+    homeScreen.hidden = true;
+    gameScreen.hidden = false;
+  } catch (error) {
+    console.error("Impossible de démarrer la partie.", error);
+    playButton.disabled = false;
+    playButton.querySelector("span")!.textContent = "Jouer";
+    launchStatus.dataset.error = "true";
+    launchStatus.textContent =
+      "Le jeu n’a pas pu démarrer. Vérifiez le chargement puis réessayez.";
+  }
+});
