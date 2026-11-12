@@ -1,11 +1,12 @@
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  color: #eaf7ff;
-  background: #101820;
+  font-family: Inter, "Segoe UI", Avenir, Helvetica, Arial, sans-serif;
+  color: #f5f4ed;
+  background: #10130f;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
 }
 
 * {
@@ -14,39 +15,184 @@
 
 html,
 body {
-  margin: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  background: radial-gradient(circle at top, #1b2f3d 0%, #0d1620 60%, #090d12 100%);
+  margin: 0;
 }
 
 body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #10130f;
 }
 
-.game-shell {
-  width: 100vw;
-  height: 100vh;
+.home-screen {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  min-height: 100vh;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 28px clamp(24px, 7vw, 104px) 25px;
+  background:
+    linear-gradient(90deg, rgb(5 8 18 / 64%), rgb(5 8 18 / 22%) 72%),
+    url("./assets/homeBackground.png") center / cover no-repeat;
 }
 
-.game-shell h1 {
+.home-screen[hidden] {
   display: none;
 }
 
-#game-board {
-  width: auto;
-  height: auto;
+.home-screen::before {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgb(255 255 255 / 2.5%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 2.5%) 1px, transparent 1px);
+  background-size: 58px 58px;
+  content: "";
+  mask-image: linear-gradient(to bottom, black, transparent 85%);
+  pointer-events: none;
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
   display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 0;
+}
+
+.hero-copy {
+  max-width: 100%;
+  text-align: center;
+}
+
+.hero h1 {
+  margin: 0;
+  color: #f5f4ed;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-size: clamp(58px, 8.2vw, 108px);
+  font-weight: 900;
+  letter-spacing: 0.015em;
+  line-height: 0.91;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2vw, 24px);
+}
+
+.title-character {
+  display: block;
+  width: clamp(100px, 16vw, 180px);
+  flex: 0 0 auto;
+  aspect-ratio: 1;
+  background-image: url("./assets/BL%20walk.png");
+  background-position: 9.09% center;
+  background-size: 1200% 100%;
+  image-rendering: pixelated;
+}
+
+.play-button {
+  display: inline-flex;
+  min-width: 184px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 38px;
+  margin-top: clamp(30px, 5vh, 58px);
+  padding: 7px 8px 7px 24px;
+  border: 0;
+  border-radius: 9px;
+  background: #c1e16b;
+  box-shadow: 0 8px 30px rgb(193 225 107 / 16%);
+  color: #192010;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.play-button:hover {
+  transform: translateY(-2px);
+  background: #d0ed82;
+  box-shadow: 0 12px 36px rgb(193 225 107 / 26%);
+}
+
+.play-button:focus-visible {
+  outline: 3px solid #f5f4ed;
+  outline-offset: 4px;
+}
+
+.play-button:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.play-arrow {
+  display: grid;
+  width: 37px;
+  height: 37px;
+  place-items: center;
+  border-radius: 6px;
+  background: rgb(25 32 16 / 10%);
+  font-size: 23px;
+  line-height: 1;
+}
+
+.launch-status {
+  min-height: 20px;
+  margin: 14px 0 0;
+  color: #777b70;
+  font-size: 11px;
+}
+
+.launch-status[data-error="true"] {
+  color: #ff9a82;
+}
+
+.game-screen {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #0d1620;
+}
+
+#game-board {
+  display: flex;
+  width: 100%;
+  height: 100%;
   align-items: center;
   justify-content: center;
 }
 
 canvas {
   display: block;
+}
+
+@media (max-width: 760px) {
+  .home-screen {
+    padding: 22px 24px 20px;
+  }
+
+  .hero {
+    padding: 55px 0 35px;
+  }
+
+  .title-row {
+    gap: 8px;
+  }
+
+  .title-character {
+    width: clamp(88px, 24vw, 140px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .play-button {
+    transition-duration: 0.01ms;
+  }
 }
