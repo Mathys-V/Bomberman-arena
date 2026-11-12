@@ -1,3 +1,4 @@
+import { Grid } from '../engine/Grid';
 export class Bomb {
     public x: number;
     public y: number;
@@ -21,20 +22,48 @@ export class Bomb {
         }, delayInMs);
     }
     // Retourne un tableau des coordonnées (x,y) touchées par l'explosion en croix
-    public getExplosionTiles(): { x: number, y: number }[] {
+    // Retourne les coordonnées (x,y) touchées, en s'arrêtant sur les obstacles
+    public getExplosionTiles(grid: Grid): { x: number, y: number }[] {
         const tiles: { x: number, y: number }[] = [];
+        const layout = grid.getLayout();
+        const { width, height } = grid;
 
-        // On inclut toujours le centre (la case de la bombe)
+        // On inclut toujours le centre
         tiles.push({ x: this.x, y: this.y });
 
-        // On calcule la croix en fonction du radius
-        for (let i = 1; i <= this.radius; i++) {
-            tiles.push(
-                { x: this.x + i, y: this.y }, // Droite
-                { x: this.x - i, y: this.y }, // Gauche
-                { x: this.x, y: this.y + i }, // Bas
-                { x: this.x, y: this.y - i }  // Haut
-            );
+        // Les 4 directions : Droite, Gauche, Bas, Haut
+        const directions = [
+            { dx: 1, dy: 0 },
+            { dx: -1, dy: 0 },
+            { dx: 0, dy: 1 },
+            { dx: 0, dy: -1 }
+        ];
+
+        for (const dir of directions) {
+            for (let i = 1; i <= this.radius; i++) {
+                const checkX = this.x + (dir.dx * i);
+                const checkY = this.y + (dir.dy * i);
+
+                // 1. Vérification des limites de la carte
+                if (checkX < 0 || checkX >= width || checkY < 0 || checkY >= height) {
+                    break; // On arrête cette direction si on sort de la map
+                }
+
+                const tileType = layout[checkY][checkX];
+
+                // 2. Gestion des collisions
+                if (tileType === 1) {
+                    // Mur incassable : l'explosion s'arrête avant cette case
+                    break;
+                } else if (tileType === 2) {
+                    // Caisse : on l'ajoute pour la détruire, mais on arrête la propagation
+                    tiles.push({ x: checkX, y: checkY });
+                    break;
+                } else {
+                    // Case vide (0) : on l'ajoute et l'explosion continue
+                    tiles.push({ x: checkX, y: checkY });
+                }
+            }
         }
 
         return tiles;
