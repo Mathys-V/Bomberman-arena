@@ -94,8 +94,21 @@ let gameStarted = false;
 // -----------------------------------------------------------------------------
 
 export const eventBus = new EventBus();
-export let activeNetworkManager: INetworkManager | null = null;
-export let activeInputManager: InputManager | null = null;
+
+/**
+ * Session de jeu active encapsulant les instances réseau et contrôles.
+ * Exportée sous forme d'objet constant pour éliminer l'avertissement SonarCloud
+ * sur les exports 'let' mutables.
+ */
+export interface GameSession {
+  networkManager: INetworkManager | null;
+  inputManager: InputManager | null;
+}
+
+export const activeSession: GameSession = {
+  networkManager: null,
+  inputManager: null,
+};
 
 // -----------------------------------------------------------------------------
 // Couches graphiques PixiJS
@@ -293,6 +306,22 @@ function drawMap(): void {
 // -----------------------------------------------------------------------------
 
 /**
+ * Normalise l'identifiant du joueur vers les identifiants canoniques p1 ou p2.
+ *
+ * @param playerId Identifiant reçu du réseau.
+ * @returns Identifiant normalisé.
+ */
+function normalizePlayerId(playerId: string): string {
+  if (playerId === "player1") {
+    return "p1";
+  }
+  if (playerId === "player2") {
+    return "p2";
+  }
+  return playerId;
+}
+
+/**
  * Déplace et anime un joueur vers une case cible suite à un événement réseau.
  *
  * @param playerId Identifiant du joueur (ex: "p1", "p2").
@@ -306,7 +335,7 @@ export function animatePlayerTo(
   targetGridY: number,
   direction?: Direction,
 ): void {
-  const normalizedId = playerId === "player1" ? "p1" : playerId === "player2" ? "p2" : playerId;
+  const normalizedId = normalizePlayerId(playerId);
   const entity = players.get(normalizedId) ?? players.get("p1");
 
   if (!entity || entity.moving) {
@@ -491,11 +520,11 @@ playButton.addEventListener("click", async () => {
     await initArena();
 
     // 1. Initialisation du gestionnaire réseau (réel ou mockable)
-    activeNetworkManager = createNetworkManager();
-    activeNetworkManager.connect();
+    activeSession.networkManager = createNetworkManager();
+    activeSession.networkManager.connect();
 
     // 2. Écoute des trames entrantes et acheminement vers l'EventBus
-    activeNetworkManager.listen((rawData: unknown) => {
+    activeSession.networkManager.listen((rawData: unknown) => {
       console.log("Données reçues du réseau :", rawData);
       const positionUpdate = parsePositionUpdated(rawData);
       if (positionUpdate) {
@@ -504,7 +533,7 @@ playButton.addEventListener("click", async () => {
     });
 
     // 3. Initialisation des contrôles (capture clavier -> envoi réseau)
-    activeInputManager = new InputManager((message) => {
+    activeSession.inputManager = new InputManager((message) => {
       const enrichedMessage = {
         ...message,
         event: message.type,
@@ -513,7 +542,7 @@ playButton.addEventListener("click", async () => {
           playerId: "p1",
         },
       };
-      activeNetworkManager?.sendMessage(enrichedMessage);
+      activeSession.networkManager?.sendMessage(enrichedMessage);
     });
 
     gameStarted = true;

@@ -57,6 +57,24 @@ export function isDirection(value: unknown): value is Direction {
 }
 
 /**
+ * Extrait l'objet de données contenu dans le message (data ou payload).
+ *
+ * @param record Objet message brut sous forme de dictionnaire.
+ * @returns Le sous-objet contenant les paramètres de l'action ou null.
+ */
+function extractPayloadRecord(
+  record: Record<string, unknown>,
+): Record<string, unknown> | null {
+  if (typeof record.data === "object" && record.data !== null) {
+    return record.data as Record<string, unknown>;
+  }
+  if (typeof record.payload === "object" && record.payload !== null) {
+    return record.payload as Record<string, unknown>;
+  }
+  return null;
+}
+
+/**
  * Analyse et extrait un événement de mise à jour de position depuis un message brut inconnu.
  * Gère de façon transparente les deux formats de contrat :
  * - `{ event: "POSITION_UPDATED", data: { playerId, x, y, direction } }`
@@ -77,14 +95,7 @@ export function parsePositionUpdated(raw: unknown): PlayerPositionUpdate | null 
     return null;
   }
 
-  const content = (
-    typeof record.data === "object" && record.data !== null
-      ? record.data
-      : typeof record.payload === "object" && record.payload !== null
-        ? record.payload
-        : null
-  ) as Record<string, unknown> | null;
-
+  const content = extractPayloadRecord(record);
   if (!content) {
     return null;
   }

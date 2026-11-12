@@ -78,7 +78,7 @@ export class NetworkManager implements INetworkManager {
    * Ferme la connexion WebSocket si elle est active.
    */
   public disconnect(): void {
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+    if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.close();
       this.socket = null;
     }
