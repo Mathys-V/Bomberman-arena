@@ -10,10 +10,18 @@ import {
 } from "pixi.js";
 import { InputManager } from "./InputManager";
 import { NetworkManager } from "./NetworkManager";
+import { MockNetworkManager } from "./network/MockNetworkManager";
+import { INetworkManager } from "./network/INetworkManager";
+import { EventBus } from "./core/EventBus";
+import {
+  Direction,
+  parsePositionUpdated,
+  PlayerPositionUpdate,
+} from "./types/game";
 import "./styles.css";
 
 // -----------------------------------------------------------------------------
-// Configuration et types
+// Configuration et constantes de l'arène
 // -----------------------------------------------------------------------------
 
 const boardSize = 13;
@@ -23,8 +31,6 @@ const arenaHeight = boardSize * tileSize;
 const playerScale = 1.69;
 const playerMoveDuration = 140;
 const playerFrameDuration = 75;
-
-type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 
 type ArenaTiles = Record<
   | "ground"
@@ -45,7 +51,10 @@ type ArenaLayers = {
   dynamic: Container;
 };
 
-const map = [
+/**
+ * Carte statique par défaut (utilisée pour l'arène et les collisions de base).
+ */
+export const defaultMap: readonly string[] = [
   "#############",
   "#...........#",
   "#.B.B.B.B...#",
@@ -62,7 +71,7 @@ const map = [
 ];
 
 // -----------------------------------------------------------------------------
-// Références à la page, réseau et contrôles
+// Éléments du DOM et Navigation
 // -----------------------------------------------------------------------------
 
 const gameBoard = document.querySelector<HTMLElement>("#game-board");
@@ -78,11 +87,18 @@ if (!homeScreen || !gameScreen || !playButton || !launchStatus) {
   throw new Error("Éléments de navigation introuvables");
 }
 
-let movePlayer: (direction: Direction) => void = () => {};
 let gameStarted = false;
 
 // -----------------------------------------------------------------------------
-// Couches graphiques
+// Bus d'événements et Instances Réseau / Contrôles
+// -----------------------------------------------------------------------------
+
+export const eventBus = new EventBus();
+export let activeNetworkManager: INetworkManager | null = null;
+export let activeInputManager: InputManager | null = null;
+
+// -----------------------------------------------------------------------------
+// Couches graphiques PixiJS
 // -----------------------------------------------------------------------------
 
 const layers: ArenaLayers = {
@@ -94,8 +110,40 @@ const layers: ArenaLayers = {
 const arenaContainer = new Container();
 arenaContainer.addChild(layers.floor, layers.decor, layers.dynamic);
 
+let currentTiles: ArenaTiles;
+
 // -----------------------------------------------------------------------------
-// Chargement et préparation des textures
+// Entités Joueurs et Animations
+// -----------------------------------------------------------------------------
+
+interface PlayerEntity {
+  readonly id: string;
+  readonly sprite: Sprite;
+  readonly walkFrames: Texture[];
+  gridX: number;
+  gridY: number;
+  moving: boolean;
+  elapsed: number;
+  animationTime: number;
+  startX: number;
+  startY: number;
+  targetX: number;
+  targetY: number;
+  frameBase: number;
+}
+
+const players = new Map<string, PlayerEntity>();
+let playerInset = 0;
+
+const directionFrameBase: Record<Direction, number> = {
+  DOWN: 0,
+  UP: 3,
+  LEFT: 6,
+  RIGHT: 9,
+};
+
+// -----------------------------------------------------------------------------
+// Textures et Découpage
 // -----------------------------------------------------------------------------
 
 function cropTexture(
@@ -180,10 +228,8 @@ async function loadTilesetWithFallback(app: Application): Promise<ArenaTiles> {
   }
 }
 
-async function loadPlayerFrames(): Promise<Texture[]> {
-  const walkSheet = await Assets.load<Texture>(
-    new URL("./assets/BL walk.png", import.meta.url).href,
-  );
+async function loadWalkFrames(assetUrl: string): Promise<Texture[]> {
+  const walkSheet = await Assets.load<Texture>(assetUrl);
   const frameSize = walkSheet.height;
 
   return Array.from({ length: 12 }, (_, index) =>
@@ -192,7 +238,7 @@ async function loadPlayerFrames(): Promise<Texture[]> {
 }
 
 // -----------------------------------------------------------------------------
-// Dessin du terrain et de la carte
+// Dessin du terrain et de la grille
 // -----------------------------------------------------------------------------
 
 function placeTile(
@@ -228,12 +274,10 @@ function getWallTexture(x: number, y: number): Texture {
   return currentTiles.solid;
 }
 
-let currentTiles: ArenaTiles;
-
 function drawMap(): void {
-  for (let y = 0; y < map.length; y += 1) {
-    for (let x = 0; x < map[y].length; x += 1) {
-      const cell = map[y][x];
+  for (let y = 0; y < defaultMap.length; y += 1) {
+    for (let x = 0; x < defaultMap[y].length; x += 1) {
+      const cell = defaultMap[y][x];
 
       if (cell === "#") {
         placeTile(layers.decor, getWallTexture(x, y), x, y);
@@ -245,109 +289,141 @@ function drawMap(): void {
 }
 
 // -----------------------------------------------------------------------------
-// Joueurs et déplacements
+// Gestion des Déplacements et Rendu des Joueurs
 // -----------------------------------------------------------------------------
 
-async function loadSecondPlayerTexture(): Promise<Texture> {
-  const walkSheet = await Assets.load<Texture>(
-    new URL("./assets/BL walk 2.png", import.meta.url).href,
-  );
-  const frameSize = walkSheet.height;
-  return cropTexture(walkSheet, frameSize, 0, frameSize);
-}
-
-function setupPlayerMovement(
-  app: Application,
-  sprite: Sprite,
-  walkFrames: Texture[],
-  playerInset: number,
+/**
+ * Déplace et anime un joueur vers une case cible suite à un événement réseau.
+ *
+ * @param playerId Identifiant du joueur (ex: "p1", "p2").
+ * @param targetGridX Coordonnée X sur la grille.
+ * @param targetGridY Coordonnée Y sur la grille.
+ * @param direction Direction explicite optionnelle.
+ */
+export function animatePlayerTo(
+  playerId: string,
+  targetGridX: number,
+  targetGridY: number,
+  direction?: Direction,
 ): void {
-  let gridX = 1;
-  let gridY = 1;
-  let moving = false;
-  let elapsed = 0;
-  let animationTime = 0;
-  let startX = tileSize - playerInset;
-  let startY = tileSize - playerInset;
-  let targetX = startX;
-  let targetY = startY;
-  let frameBase = 0;
+  const normalizedId = playerId === "player1" ? "p1" : playerId === "player2" ? "p2" : playerId;
+  const entity = players.get(normalizedId) ?? players.get("p1");
 
-  const directionOffsets: Record<Direction, [number, number]> = {
-    UP: [0, -1],
-    DOWN: [0, 1],
-    LEFT: [-1, 0],
-    RIGHT: [1, 0],
-  };
-  const directionFrameBase: Record<Direction, number> = {
-    DOWN: 0,
-    UP: 3,
-    LEFT: 6,
-    RIGHT: 9,
-  };
+  if (!entity || entity.moving) {
+    return;
+  }
 
-  movePlayer = (direction) => {
-    if (moving) return;
+  let resolvedDirection: Direction = direction ?? "DOWN";
+  if (!direction) {
+    if (targetGridX > entity.gridX) resolvedDirection = "RIGHT";
+    else if (targetGridX < entity.gridX) resolvedDirection = "LEFT";
+    else if (targetGridY > entity.gridY) resolvedDirection = "DOWN";
+    else if (targetGridY < entity.gridY) resolvedDirection = "UP";
+  }
 
-    const [dx, dy] = directionOffsets[direction];
-    const nextX = gridX + dx;
-    const nextY = gridY + dy;
-    if (map[nextY]?.[nextX] !== ".") return;
-
-    gridX = nextX;
-    gridY = nextY;
-    startX = sprite.x;
-    startY = sprite.y;
-    targetX = gridX * tileSize - playerInset;
-    targetY = gridY * tileSize - playerInset;
-    elapsed = 0;
-    moving = true;
-    frameBase = directionFrameBase[direction];
-  };
-
-  app.ticker.add((ticker) => {
-    if (!moving) return;
-
-    elapsed += ticker.deltaMS;
-    animationTime += ticker.deltaMS;
-    const progress = Math.min(elapsed / playerMoveDuration, 1);
-    sprite.position.set(
-      startX + (targetX - startX) * progress,
-      startY + (targetY - startY) * progress,
-    );
-    const frameIndex = Math.floor(animationTime / playerFrameDuration) % 3;
-    sprite.texture = walkFrames[frameBase + frameIndex];
-
-    if (progress === 1) {
-      moving = false;
-      sprite.texture = walkFrames[frameBase];
-    }
-  });
+  entity.startX = entity.sprite.x;
+  entity.startY = entity.sprite.y;
+  entity.targetX = targetGridX * tileSize - playerInset;
+  entity.targetY = targetGridY * tileSize - playerInset;
+  entity.gridX = targetGridX;
+  entity.gridY = targetGridY;
+  entity.elapsed = 0;
+  entity.moving = true;
+  entity.frameBase = directionFrameBase[resolvedDirection];
 }
 
 async function drawPlayers(app: Application): Promise<void> {
-  const walkFrames = await loadPlayerFrames();
   const playerSize = tileSize * playerScale;
-  const playerInset = (playerSize - tileSize) / 2;
-  const player1Sprite = new Sprite(walkFrames[1]);
-  player1Sprite.width = playerSize;
-  player1Sprite.height = playerSize;
-  player1Sprite.position.set(tileSize - playerInset, tileSize - playerInset);
+  playerInset = (playerSize - tileSize) / 2;
 
-  const player2Sprite = new Sprite(await loadSecondPlayerTexture());
-  player2Sprite.width = playerSize;
-  player2Sprite.height = playerSize;
-  player2Sprite.position.set(
-    (boardSize - 2) * tileSize - playerInset,
-    (boardSize - 2) * tileSize - playerInset,
+  // Joueur 1 (bleu)
+  const p1Frames = await loadWalkFrames(
+    new URL("./assets/BL walk.png", import.meta.url).href,
   );
+  const p1Sprite = new Sprite(p1Frames[1]);
+  p1Sprite.width = playerSize;
+  p1Sprite.height = playerSize;
+  p1Sprite.position.set(tileSize - playerInset, tileSize - playerInset);
 
-  layers.dynamic.addChild(player1Sprite, player2Sprite);
-  setupPlayerMovement(app, player1Sprite, walkFrames, playerInset);
+  players.set("p1", {
+    id: "p1",
+    sprite: p1Sprite,
+    walkFrames: p1Frames,
+    gridX: 1,
+    gridY: 1,
+    moving: false,
+    elapsed: 0,
+    animationTime: 0,
+    startX: tileSize - playerInset,
+    startY: tileSize - playerInset,
+    targetX: tileSize - playerInset,
+    targetY: tileSize - playerInset,
+    frameBase: 0,
+  });
+
+  // Joueur 2 (rouge)
+  const p2Frames = await loadWalkFrames(
+    new URL("./assets/BL walk 2.png", import.meta.url).href,
+  );
+  const p2Sprite = new Sprite(p2Frames[1]);
+  p2Sprite.width = playerSize;
+  p2Sprite.height = playerSize;
+  const p2StartX = (boardSize - 2) * tileSize - playerInset;
+  const p2StartY = (boardSize - 2) * tileSize - playerInset;
+  p2Sprite.position.set(p2StartX, p2StartY);
+
+  players.set("p2", {
+    id: "p2",
+    sprite: p2Sprite,
+    walkFrames: p2Frames,
+    gridX: boardSize - 2,
+    gridY: boardSize - 2,
+    moving: false,
+    elapsed: 0,
+    animationTime: 0,
+    startX: p2StartX,
+    startY: p2StartY,
+    targetX: p2StartX,
+    targetY: p2StartY,
+    frameBase: 0,
+  });
+
+  layers.dynamic.addChild(p1Sprite, p2Sprite);
+
+  // Boucle de mise à jour des animations PixiJS
+  app.ticker.add((ticker) => {
+    for (const entity of players.values()) {
+      if (!entity.moving) {
+        continue;
+      }
+
+      entity.elapsed += ticker.deltaMS;
+      entity.animationTime += ticker.deltaMS;
+
+      const progress = Math.min(entity.elapsed / playerMoveDuration, 1);
+      entity.sprite.position.set(
+        entity.startX + (entity.targetX - entity.startX) * progress,
+        entity.startY + (entity.targetY - entity.startY) * progress,
+      );
+
+      const frameIndex = Math.floor(entity.animationTime / playerFrameDuration) % 3;
+      entity.sprite.texture = entity.walkFrames[entity.frameBase + frameIndex];
+
+      if (progress === 1) {
+        entity.moving = false;
+        entity.sprite.texture = entity.walkFrames[entity.frameBase];
+      }
+    }
+  });
+
+  // Abonnement de l'arène au bus d'événements : réception de POSITION_UPDATED
+  eventBus.on("player:moved", (update: PlayerPositionUpdate) => {
+    animatePlayerTo(update.playerId, update.x, update.y, update.direction);
+  });
 }
 
 // -----------------------------------------------------------------------------
-// Adaptation à la fenêtre et démarrage
+// Adaptation à la fenêtre et Démarrage
 // -----------------------------------------------------------------------------
 
 function fitArenaToViewport(app: Application): void {
@@ -385,6 +461,24 @@ async function initArena(): Promise<void> {
   window.addEventListener("resize", () => fitArenaToViewport(app));
 }
 
+/**
+ * Crée le gestionnaire réseau approprié (Mock ou Réel).
+ * Activé avec ?mock=true dans l'URL pour les tests hors-ligne exigés par le cahier des charges.
+ */
+export function createNetworkManager(): INetworkManager {
+  const urlParams = new URLSearchParams(window.location.search);
+  const isMock = urlParams.get("mock") === "true";
+
+  if (isMock) {
+    const mock = new MockNetworkManager(defaultMap);
+    // Active une patrouille automatique pour le Joueur 2 en mode mock
+    mock.startBotSimulation(1400);
+    return mock;
+  }
+
+  return new NetworkManager(import.meta.env.VITE_WS_URL || "ws://localhost:8080");
+}
+
 playButton.addEventListener("click", async () => {
   if (gameStarted) return;
 
@@ -395,18 +489,31 @@ playButton.addEventListener("click", async () => {
 
   try {
     await initArena();
-    const networkManager = new NetworkManager(
-      import.meta.env.VITE_WS_URL || "ws://localhost:8080",
-    );
-    networkManager.connect();
-    networkManager.listen((data) => {
-      console.log("Données traitées dans le main :", data);
-    });
-    new InputManager((message) => {
-      networkManager.sendMessage(message);
 
-      const direction = message.payload.direction;
-      if (direction) movePlayer(direction);
+    // 1. Initialisation du gestionnaire réseau (réel ou mockable)
+    activeNetworkManager = createNetworkManager();
+    activeNetworkManager.connect();
+
+    // 2. Écoute des trames entrantes et acheminement vers l'EventBus
+    activeNetworkManager.listen((rawData: unknown) => {
+      console.log("Données reçues du réseau :", rawData);
+      const positionUpdate = parsePositionUpdated(rawData);
+      if (positionUpdate) {
+        eventBus.emit("player:moved", positionUpdate);
+      }
+    });
+
+    // 3. Initialisation des contrôles (capture clavier -> envoi réseau)
+    activeInputManager = new InputManager((message) => {
+      const enrichedMessage = {
+        ...message,
+        event: message.type,
+        data: {
+          ...message.payload,
+          playerId: "p1",
+        },
+      };
+      activeNetworkManager?.sendMessage(enrichedMessage);
     });
 
     gameStarted = true;
