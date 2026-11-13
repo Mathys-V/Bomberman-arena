@@ -29,14 +29,14 @@ La stratégie adoptée applique le modèle de la **Pyramide des Tests** pour éq
      / & Charge  \   -> WebSocket (Jest + ws) & Stress (k6)
     /-------------\
    /   Unitaires   \ Tests Unitaires (Jest / Vitest)
-  /_________________\-> Logique métier Grid, Player, Bomb, Input (Couverture LCOV)
+  /_________________\-> Logique métier Grid, Player, Bomb, Input (Couverture LCOV > 95%)
 ```
 
 ### Répartition des responsabilités et outillage :
 
 | Niveau de test | Cible | Outil principal | Responsable | Fréquence d'exécution |
 | :--- | :--- | :--- | :--- | :--- |
-| **Tests Unitaires Serveur** | Moteur de jeu (`Grid`, `Player`, `Bomb`) | Jest / `ts-jest` | Pôle Backend & DevOps | Chaque commit / PR (CI) |
+| **Tests Unitaires Serveur** | Moteur de jeu (`Grid`, `Player`, `Bomb`, `EventRouter`, `WebSocketServer`) | Jest / `ts-jest` | Pôle Backend & DevOps | Chaque commit / PR (CI) |
 | **Tests Unitaires Client** | Gestionnaires (`InputManager`, `NetworkManager`) | Jest / `ts-jest` | Pôle Frontend & DevOps | Chaque commit / PR (CI) |
 | **Tests d'Intégration** | Échanges WebSocket réels (Client <-> Serveur) | Jest + client `ws` | Pôle DevOps & Qualité | Chaque commit / PR (CI) |
 | **Tests de Charge / Dynamiques**| Tenue sous concurrence WebSocket (30 VUs) | k6 (Grafana k6) | Pôle DevOps (Mathys) | Jalons de release / CI ponctuelle |
@@ -56,12 +56,16 @@ La stratégie adoptée applique le modèle de la **Pyramide des Tests** pour éq
 | **TU-SRV-02** | `Grid` | Placement régulier des murs fixes | Coordonnées impaires `(x, y)` | Cellules `(1,1)`, `(1,3)`, `(3,1)` = type `1` (Fixe) | Validé |
 | **TU-SRV-03** | `Grid` | Présence de caisses destructibles aléatoires | Génération pseudo-aléatoire sécurisée | Au moins une case de type `2` (Destructible) | Validé |
 | **TU-SRV-04** | `Grid` | Protection de la zone de réapparition (Spawn) | Coin supérieur gauche `(0,0)` | Cases `(0,0)`, `(0,1)`, `(1,0)` = type `0` (Vide) | Validé |
-| **TU-SRV-05** | `Player` | Positionnement initial du joueur | Coordonnées `(0, 0)` | `player.x = 0`, `player.y = 0` | Validé |
-| **TU-SRV-06** | `Player` | Déplacement autorisé sur case libre | Direction `RIGHT`, case cible sans obstacle | Coordonnées incrémentées `(1, 1)` | Validé |
-| **TU-SRV-07** | `Player` | Détection de collision contre un mur | Direction `RIGHT`, obstacle simulé en `(1,0)` | Maintien des coordonnées initiales `(0, 0)` | Validé |
-| **TU-SRV-08** | `Bomb` | Instanciation de la bombe | Coordonnées `(5, 5)`, `owner = 'player1'` | Propriétés initialisées, `isExploded = false` | Validé |
-| **TU-SRV-09** | `Bomb` | Déclenchement de l'explosion par temporisation | Délai 3000 ms (via fake timers Jest) | `isExploded = true`, callback d'explosion appelé 1x | Validé |
-| **TU-SRV-10** | `Bomb` | Calcul de la zone d'impact en croix | Bombe en `(5, 5)`, rayon de 2 cases | 9 cases générées : centre + 4 branches | Validé |
+| **TU-SRV-05** | `Grid` | Détection d'obstacles et limites de carte | `isObstacle(-1, 0)`, `(15, 0)`, `(1, 1)` | Renvoie `true` pour obstacles et sorties de grille | Validé |
+| **TU-SRV-06** | `Player` | Positionnement initial du joueur | Coordonnées `(0, 0)` | `player.x = 0`, `player.y = 0` | Validé |
+| **TU-SRV-07** | `Player` | Déplacements multidirectionnels libres | Directions `UP`, `DOWN`, `LEFT`, `RIGHT` | Coordonnées incrémentées / décrémentées | Validé |
+| **TU-SRV-08** | `Player` | Détection de collision contre un mur | Direction avec obstacle simulé | Maintien des coordonnées initiales | Validé |
+| **TU-SRV-09** | `Bomb` | Instanciation de la bombe | Coordonnées `(5, 5)`, `owner = 'player1'` | Propriétés initialisées, `isExploded = false` | Validé |
+| **TU-SRV-10** | `Bomb` | Déclenchement de l'explosion par temporisation | Délai 3000 ms (via fake timers Jest) | `isExploded = true`, callback d'explosion appelé 1x | Validé |
+| **TU-SRV-11** | `Bomb` | Calcul de la zone d'impact en croix | Bombe en `(5, 5)`, rayon de 2 cases | 9 cases générées : centre + 4 branches | Validé |
+| **TU-SRV-12** | `EventRouter` | Routage des événements `JOIN_LOBBY` et `PLAYER_MOVE` | Payloads JSON valides | Messages de retour typés `LOBBY_UPDATED` / `POSITION_UPDATED` | Validé |
+| **TU-SRV-13** | `EventRouter` | Gestion des événements inconnus et JSON invalides | Payload erroné ou chaîne corrompue | Message d'erreur avec code `UNKNOWN_EVENT` / `INVALID_JSON` | Validé |
+| **TU-SRV-14** | `WebSocketServer` | Cycle de vie du serveur autonome (`start`/`stop`) | Port éphémère et client `ws` | Démarrage, routage message, déconnexion et arrêt propre | Validé |
 
 ---
 
@@ -69,10 +73,13 @@ La stratégie adoptée applique le modèle de la **Pyramide des Tests** pour éq
 
 | ID | Composant cible | Scénario testé | Données d'entrée | Résultat attendu | Statut |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **TU-CLI-01** | `InputManager` | Capture de l'entrée de déplacement haut | Touche clavier `ArrowUp` (`keydown`) | Émission événement `{ type: "PLAYER_MOVE", payload: { direction: "UP" } }` | Validé |
+| **TU-CLI-01** | `InputManager` | Capture des entrées de déplacement complètes | `ArrowUp`/`KeyW`, `ArrowDown`/`KeyS`, `ArrowLeft`/`KeyA`, `ArrowRight`/`KeyD` | Émission de `PLAYER_MOVE` avec la direction adéquate | Validé |
 | **TU-CLI-02** | `InputManager` | Capture de l'entrée de pose de bombe | Touche clavier `Space` (`keydown`) | Émission événement `{ type: "PLACE_BOMB", payload: {} }` | Validé |
-| **TU-CLI-03** | `NetworkManager` | Initialisation de la connexion WebSocket | URL serveur `ws://localhost:8080` | `new WebSocket` appelé avec l'URL cible | Validé |
-| **TU-CLI-04** | `NetworkManager` | Sérialisation et expédition de message | Objet JavaScript valide | Conversion JSON envoyée sur le socket ouvert | Validé |
+| **TU-CLI-03** | `InputManager` | Filtrage des touches non assignées | Touche non configurée (`KeyQ`) | Aucun message émis, aucun effet secondaire | Validé |
+| **TU-CLI-04** | `NetworkManager` | Initialisation avec URL explicite ou par défaut | URL paramétrée ou appel vide | `new WebSocket` appelé avec l'URL cible | Validé |
+| **TU-CLI-05** | `NetworkManager` | Callbacks de connexion (`onopen`, `onclose`, `onerror`)| Simulation événements socket | Exécution des logs sans lever d'exception | Validé |
+| **TU-CLI-06** | `NetworkManager` | Expédition de message conditionnelle | Socket ouvert vs socket fermé/déconnecté | Envoi réel si ouvert, rejet gracieux sinon | Validé |
+| **TU-CLI-07** | `NetworkManager` | Réception et traitement de messages entrants | Message JSON valide vs invalide | Appel callback de mise à jour ou catch gracieux | Validé |
 
 ---
 
@@ -126,7 +133,7 @@ Afin de garantir la reproductibilité des tests sur n'importe quel poste de trav
 cd server
 npm test
 
-# 2. Tests avec Couverture LCOV Serveur
+# 2. Tests avec Couverture LCOV Serveur (> 95%)
 cd server
 npm run test:coverage
 
@@ -134,7 +141,7 @@ npm run test:coverage
 cd client
 npm test
 
-# 4. Tests avec Couverture LCOV Client
+# 4. Tests avec Couverture LCOV Client (100%)
 cd client
 npm run test:coverage
 
@@ -169,7 +176,7 @@ Tous les scénarios de test et de validation de packaging sont intégrés dans l
 
 Pour qu'une fonctionnalité ou un correctif soit accepté dans la branche d'intégration `develop` :
 - [x] **Succès des tests automatisés** : 100% des tests unitaires et d'intégration doivent être passants (aucun test ignoré ou en échec).
-- [x] **Couverture de code Backend** : Le taux de couverture globale des lignes du backend doit dépasser 70% (actuellement mesuré à 74.22% sur les composants métier).
+- [x] **Couverture de code Backend & Client** : Le taux de couverture global dépasse 80% (exigence Quality Gate SonarCloud) avec un résultat réel supérieur à 95% sur l'ensemble des modules cibles (100% sur Grid, Player, Bomb, EventRouter, WebSocketServer, InputManager et NetworkManager).
 - [x] **Conformité statique** : Zéro erreur de linting retournée par ESLint / Prettier.
 - [x] **Validation SonarCloud** : La Pull Request doit obligatoirement obtenir le statut **Quality Gate : PASSED**.
 - [x] **Packaging Serveur & Client au vert** : Le build Docker serveur et la compilation Tauri client doivent réussir sans avertissement bloquant.

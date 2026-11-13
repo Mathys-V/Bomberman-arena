@@ -57,7 +57,7 @@ docker compose down
 
 - Analyse statique & Couverture de code (SonarQube) :
   SonarCloud s'est révélé redoutable pour maintenir la qualité du code. Il a notamment permis d'identifier et de corriger une vulnérabilité de sécurité sur la génération aléatoire de la grille (remplacement de Math.random par node:crypto), ainsi que d'optimiser l'allocation de la mémoire (push multiples).
-  Grâce à la génération continue des rapports LCOV via Jest et leur transfert automatisé à SonarCloud, le moteur de jeu backend atteint un taux de couverture de code de 74.22% (100% sur Bomb.ts, 86.95% sur Grid.ts, 88.88% sur EventRouter.ts).
+  Grâce à la génération continue des rapports LCOV via Jest et leur transfert automatisé à SonarCloud, le moteur de jeu backend et les gestionnaires clients atteignent un taux de couverture de code de 96% (100% sur Bomb.ts, Grid.ts, Player.ts, EventRouter.ts, WebSocketServer.ts, InputManager.ts et NetworkManager.ts), validant avec succès le Quality Gate SonarCloud (exigence >= 80%).
 
 - Stratégie de Tests & Performances :
   Le projet est couvert par trois niveaux de tests :
