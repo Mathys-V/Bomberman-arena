@@ -26,9 +26,15 @@ jobs:
         working-directory: ./server
         run: npm run lint
 
-      - name: Exécution des tests unitaires
+      - name: Exécution des tests unitaires avec couverture
         working-directory: ./server
-        run: npm test
+        run: npm run test:coverage
+
+      - name: Sauvegarde du rapport de couverture Serveur
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-server
+          path: server/coverage/lcov.info
 
   qualite-client:
     runs-on: ubuntu-latest
@@ -49,18 +55,37 @@ jobs:
         working-directory: ./client
         run: npm run lint
 
-      - name: Exécution des tests unitaires
+      - name: Exécution des tests unitaires avec couverture
         working-directory: ./client
-        run: npm test
+        run: npm run test:coverage
+
+      - name: Sauvegarde du rapport de couverture Client
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-client
+          path: client/coverage/lcov.info
 
   analyse-sonarqube:
     name: Analyse SonarQube
     runs-on: ubuntu-latest
+    needs: [qualite-serveur, qualite-client] # Attend la génération des rapports de couverture
     steps:
       - name: Récupération du code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Obligatoire pour que SonarQube analyse l'historique complet
+
+      - name: Téléchargement du rapport de couverture Serveur
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-server
+          path: server/coverage
+
+      - name: Téléchargement du rapport de couverture Client
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-client
+          path: client/coverage
 
       - name: Scan SonarCloud
         uses: SonarSource/sonarqube-scan-action@v5.0.0
