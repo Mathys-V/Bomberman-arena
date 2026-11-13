@@ -10,5 +10,10 @@ module.exports = {
   },
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov"],
-  collectCoverageFrom: ["src/**/*.ts", "!src/**/*.test.ts", "!src/vite-env.d.ts"],
+  collectCoverageFrom: [
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "!src/vite-env.d.ts",
+    "!src/main.ts",
+  ],
 };

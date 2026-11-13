@@ -42,3 +42,21 @@ describe('Wall Generation', () => {
     expect(hasBox).toBe(true);
   });
 });
+
+describe('Grid Obstacle Detection', () => {
+  it('devrait identifier correctement les obstacles et les limites', () => {
+    const grid = new Grid(15, 13);
+
+    // Hors limites
+    expect(grid.isObstacle(-1, 0)).toBe(true);
+    expect(grid.isObstacle(0, -1)).toBe(true);
+    expect(grid.isObstacle(15, 0)).toBe(true);
+    expect(grid.isObstacle(0, 13)).toBe(true);
+
+    // Murs fixes
+    expect(grid.isObstacle(1, 1)).toBe(true);
+
+    // Case de départ libre (spawn 0,0)
+    expect(grid.isObstacle(0, 0)).toBe(false);
+  });
+});
