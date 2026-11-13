@@ -1,33 +1,45 @@
-// Définition de nos types basés sur le contrat JSON
-type ActionType = "PLAYER_MOVE" | "PLACE_BOMB";
-type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
+import { ActionType, Direction } from "./types/game";
 
-// On utilise le type 'Direction' ici pour corriger les deux erreurs :
-// 1. Direction est maintenant utilisé.
-// 2. On n'utilise plus le mot interdit 'any'.
-interface GameMessage {
+/**
+ * Message généré par l'InputManager lors d'une action utilisateur.
+ */
+export interface GameMessage {
   type: ActionType;
   payload: { direction?: Direction };
 }
 
+/**
+ * Gestionnaire des entrées utilisateur (clavier).
+ * Isole totalement la capture des touches de la logique réseau grâce à un callback injecté.
+ */
 export class InputManager {
-  // Le callback qui sera appelé à chaque touche pressée
-  // Cela permet de découpler totalement cette classe du réseau !
   private readonly onMessageGenerated: (message: GameMessage) => void;
 
+  /**
+   * Initialise l'InputManager avec la fonction de rappel appelée à chaque action.
+   *
+   * @param onMessageGenerated Callback recevant le message généré.
+   */
   constructor(onMessageGenerated: (message: GameMessage) => void) {
     this.onMessageGenerated = onMessageGenerated;
     this.initListeners();
   }
 
+  /**
+   * Enregistre l'écouteur d'événements clavier sur l'objet window.
+   */
   private initListeners(): void {
     window.addEventListener("keydown", (event: KeyboardEvent) => {
       this.handleInput(event);
     });
   }
 
+  /**
+   * Traite l'événement clavier et produit l'intention de jeu appropriée.
+   *
+   * @param event Événement clavier déclenché.
+   */
   private handleInput(event: KeyboardEvent): void {
-    // On évite le comportement par défaut (comme le scroll de la page avec espace)
     if (
       ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
         event.code,

@@ -1,12 +1,25 @@
-export class NetworkManager {
+import { INetworkManager } from "./network/INetworkManager";
+
+/**
+ * Gestionnaire de communication WebSocket réel avec le serveur Node.js.
+ * Implémente INetworkManager pour permettre l'interchangeabilité avec le Mock.
+ */
+export class NetworkManager implements INetworkManager {
   private socket: WebSocket | null = null;
   private readonly serverUrl: string;
 
-  // On permet de passer l'URL en paramètre, avec une valeur par défaut pour le local
+  /**
+   * Initialise le gestionnaire avec l'URL du serveur WebSocket.
+   *
+   * @param serverUrl URL de connexion WebSocket (défaut : ws://localhost:8080).
+   */
   constructor(serverUrl: string = "ws://localhost:8080") {
     this.serverUrl = serverUrl;
   }
 
+  /**
+   * Établit la connexion WebSocket avec le serveur.
+   */
   public connect(): void {
     console.log(`Tentative de connexion au serveur : ${this.serverUrl}...`);
     this.socket = new WebSocket(this.serverUrl);
@@ -19,13 +32,16 @@ export class NetworkManager {
       console.log("Déconnecté du serveur WebSocket.");
     };
 
-    // On type bien l'erreur avec 'Event' pour éviter que le linter ne rouspète
     this.socket.onerror = (error: Event) => {
       console.error("Erreur de connexion WebSocket :", error);
     };
   }
 
-  // Cette méthode prend n'importe quel objet, le transforme en texte JSON et l'envoie
+  /**
+   * Sérialise et transmet un objet message au serveur si le socket est ouvert.
+   *
+   * @param message Objet à envoyer en JSON.
+   */
   public sendMessage(message: object): void {
     if (this.socket?.readyState === WebSocket.OPEN) {
       const jsonString = JSON.stringify(message);
@@ -36,7 +52,11 @@ export class NetworkManager {
     }
   }
 
-  // Écoute les messages entrants et les transmet au reste du jeu via un callback
+  /**
+   * Enregistre la fonction de rappel appelée lors de la réception d'un message.
+   *
+   * @param callback Fonction recevant les données JSON analysées.
+   */
   public listen(callback: (data: unknown) => void): void {
     if (!this.socket) {
       console.warn("Impossible d'écouter : le WebSocket n'est pas connecté.");
@@ -45,15 +65,22 @@ export class NetworkManager {
 
     this.socket.onmessage = (event: MessageEvent) => {
       try {
-        // On transforme le texte JSON reçu en objet utilisable
         const data = JSON.parse(event.data) as unknown;
         console.log("Message reçu du serveur :", data);
-
-        // On déclenche la fonction callback pour alerter le moteur graphique
         callback(data);
       } catch (error) {
         console.error("Erreur lors de la lecture du message serveur :", error);
       }
     };
+  }
+
+  /**
+   * Ferme la connexion WebSocket si elle est active.
+   */
+  public disconnect(): void {
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.close();
+      this.socket = null;
+    }
   }
 }
