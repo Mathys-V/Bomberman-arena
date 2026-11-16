@@ -13,6 +13,9 @@ export interface ServerMessage {
 
 export class EventRouter {
   private static players: Map<string, Player> = new Map();
+  
+  // FIX 1 : On demande poliment à ESLint d'ignorer le "any" pour ce mock de test
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private static grid: any; 
 
   public static handleMessage(rawMessage: string): ServerMessage | null {
@@ -21,9 +24,8 @@ export class EventRouter {
       const data = message.data || {};
 
       switch (message.event) {
-        case "JOIN_LOBBY":
+        case "JOIN_LOBBY": { // FIX 2 : Ajout d'accolades pour isoler les "const"
           const playerId = (data.playerId as string) || "unknown";
-          // FIX TESTS : On écrase l'état pour éviter les conflits entre les tests
           this.players.set(playerId, new Player(1, 3)); 
           
           return {
@@ -34,8 +36,9 @@ export class EventRouter {
               players: [{ id: playerId, name: (data.name as string) || "Player", ready: true }]
             }
           };
+        } // Fin des accolades
 
-        case "PLAYER_MOVE":
+        case "PLAYER_MOVE": { // FIX 2 : Ajout d'accolades
           const pId = (data.playerId as string) || "unknown";
           const direction = data.direction as string;
 
@@ -59,8 +62,9 @@ export class EventRouter {
               direction: direction
             }
           };
+        }
 
-        case "PLACE_BOMB":
+        case "PLACE_BOMB": { // Accolades pour rester cohérent
           return {
             event: "BOMB_PLACED",
             data: {
@@ -69,8 +73,9 @@ export class EventRouter {
               y: data.y
             }
           };
+        }
 
-        default:
+        default: {
           return {
             event: "ERROR",
             data: {
@@ -78,6 +83,7 @@ export class EventRouter {
               message: `L'événement ${message.event} n'est pas reconnu.`
             }
           };
+        }
       }
     } catch {
       return {
