@@ -83,8 +83,8 @@ jobs:
         with:
           working-directory: ./client
           start: npm run dev
-          wait-on: "http://localhost:5173"
-          browser: chrome
+          wait-on: "http://127.0.0.1:5173"
+          wait-on-timeout: 120
           record: false
 
       - name: Sauvegarde des captures en cas d'échec
