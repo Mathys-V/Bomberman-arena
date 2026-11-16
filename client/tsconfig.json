@@ -12,5 +12,5 @@
     "rootDir": "."
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "cypress", "cypress.config.ts"]
+  "exclude": ["node_modules", "dist", "cypress", "cypress.config.js"]
 }

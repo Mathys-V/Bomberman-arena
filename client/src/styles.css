@@ -78,6 +78,10 @@ body {
   line-height: 0.91;
 }
 
+.hero h1 span {
+  display: block;
+}
+
 .title-row {
   display: flex;
   align-items: center;
