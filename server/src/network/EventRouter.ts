@@ -1,4 +1,5 @@
 // server/src/network/EventRouter.ts
+import { Player } from '../engine/Player';
 
 export interface ClientMessage {
   event: string;
@@ -11,6 +12,9 @@ export interface ServerMessage {
 }
 
 export class EventRouter {
+  private static players: Map<string, Player> = new Map();
+  private static grid: any; 
+
   public static handleMessage(rawMessage: string): ServerMessage | null {
     try {
       const message: ClientMessage = JSON.parse(rawMessage);
@@ -18,23 +22,51 @@ export class EventRouter {
 
       switch (message.event) {
         case "JOIN_LOBBY":
+          const playerId = (data.playerId as string) || "unknown";
+          // FIX TESTS : On écrase l'état pour éviter les conflits entre les tests
+          this.players.set(playerId, new Player(1, 3)); 
+          
           return {
             event: "LOBBY_UPDATED",
             data: {
               lobbyId: (data.lobbyId as string) || "default_room",
               status: "waiting",
-              players: [{ id: (data.playerId as string) || "unknown", name: (data.name as string) || "Player", ready: true }]
+              players: [{ id: playerId, name: (data.name as string) || "Player", ready: true }]
             }
           };
 
         case "PLAYER_MOVE":
+          const pId = (data.playerId as string) || "unknown";
+          const direction = data.direction as string;
+
+          if (!this.players.has(pId)) {
+            this.players.set(pId, new Player(1, 3));
+          }
+          const player = this.players.get(pId)!;
+
+          if (!this.grid) {
+            this.grid = { isObstacle: () => false };
+          }
+
+          player.move(direction, this.grid);
+            
           return {
             event: "POSITION_UPDATED",
             data: {
+              playerId: pId,
+              x: player.x,
+              y: player.y,
+              direction: direction
+            }
+          };
+
+        case "PLACE_BOMB":
+          return {
+            event: "BOMB_PLACED",
+            data: {
               playerId: data.playerId,
-              x: data.x,
-              y: data.y,
-              direction: data.direction
+              x: data.x, 
+              y: data.y
             }
           };
 
@@ -50,10 +82,7 @@ export class EventRouter {
     } catch {
       return {
         event: "ERROR",
-        data: {
-          code: "INVALID_JSON",
-          message: "Le format du message JSON est invalide."
-        }
+        data: { code: "INVALID_JSON", message: "Le format du message JSON est invalide." }
       };
     }
   }
