@@ -11,29 +11,100 @@
   </head>
   <body>
     <main>
+      <!-- Écran Menu Principal -->
       <section
         id="home-screen"
         class="home-screen"
+        data-cy="menu-screen"
         aria-labelledby="page-title"
       >
         <div class="hero">
           <div class="hero-copy">
             <div class="title-row">
-              <h1 id="page-title">
+              <h1 id="page-title" data-cy="title">
                 Bomberman<br /><span>Arena</span>
               </h1>
               <span class="title-character" aria-hidden="true"></span>
             </div>
 
-            <button id="play-button" class="play-button" type="button">
-              <span>Jouer</span>
-              <span class="play-arrow" aria-hidden="true">→</span>
-            </button>
+            <!-- Formulaire de saisie du pseudo -->
+            <form id="menu-form" class="menu-form" onsubmit="return false;">
+              <div class="input-group">
+                <input
+                  id="pseudo-input"
+                  data-cy="pseudo-input"
+                  class="menu-input"
+                  type="text"
+                  placeholder="Entrez votre pseudo"
+                  maxlength="15"
+                  autocomplete="off"
+                />
+                <button
+                  id="join-btn"
+                  data-cy="join-btn"
+                  class="play-button"
+                  type="submit"
+                >
+                  <span>Rejoindre</span>
+                  <span class="play-arrow" aria-hidden="true">→</span>
+                </button>
+              </div>
+              <div
+                id="error-msg"
+                data-cy="error-msg"
+                class="error-message"
+                role="alert"
+                style="display: none;"
+              ></div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Écran Lobby / Salon d'attente -->
+      <section
+        id="lobby-screen"
+        class="home-screen hidden"
+        data-cy="lobby-screen"
+        aria-labelledby="lobby-title"
+      >
+        <div class="hero">
+          <div class="hero-copy">
+            <h2 id="lobby-title" data-cy="lobby-title" class="lobby-title">
+              Lobby - Salon d'attente
+            </h2>
+            <p class="lobby-info">
+              Joueur : <strong id="player-name" data-cy="player-name"></strong>
+            </p>
+            <p class="lobby-status-text">
+              Statut : <span id="ready-status" data-cy="ready-status">Non prêt</span>
+            </p>
+
+            <div class="lobby-actions">
+              <button
+                id="ready-btn"
+                data-cy="ready-btn"
+                class="play-button play-button-secondary"
+                type="button"
+              >
+                <span>Prêt</span>
+              </button>
+              <button
+                id="play-button"
+                data-cy="start-game-btn"
+                class="play-button"
+                type="button"
+              >
+                <span>Lancer la partie</span>
+                <span class="play-arrow" aria-hidden="true">→</span>
+              </button>
+            </div>
             <output id="launch-status" class="launch-status" aria-live="polite"></output>
           </div>
         </div>
       </section>
 
+      <!-- Écran de jeu PixiJS -->
       <section
         id="game-screen"
         class="game-screen"

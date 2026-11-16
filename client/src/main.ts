@@ -80,12 +80,64 @@ if (!gameBoard) {
 }
 
 const homeScreen = document.querySelector<HTMLElement>("#home-screen");
+const lobbyScreen = document.querySelector<HTMLElement>("#lobby-screen");
 const gameScreen = document.querySelector<HTMLElement>("#game-screen");
 const playButton = document.querySelector<HTMLButtonElement>("#play-button");
 const launchStatus = document.querySelector<HTMLElement>("#launch-status");
+const pseudoInput = document.querySelector<HTMLInputElement>("#pseudo-input");
+const joinBtn = document.querySelector<HTMLButtonElement>("#join-btn");
+const errorMsg = document.querySelector<HTMLElement>("#error-msg");
+const playerNameDisplay = document.querySelector<HTMLElement>("#player-name");
+const readyBtn = document.querySelector<HTMLButtonElement>("#ready-btn");
+const readyStatus = document.querySelector<HTMLElement>("#ready-status");
+
 if (!homeScreen || !gameScreen || !playButton || !launchStatus) {
   throw new Error("Éléments de navigation introuvables");
 }
+
+function handleJoinLobby(): void {
+  const pseudo = pseudoInput?.value.trim() ?? "";
+  if (pseudo.length < 2) {
+    if (errorMsg) {
+      errorMsg.textContent = "Le pseudo doit comporter au moins 2 caractères.";
+      errorMsg.style.display = "block";
+    }
+    return;
+  }
+
+  if (errorMsg) {
+    errorMsg.textContent = "";
+    errorMsg.style.display = "none";
+  }
+
+  if (playerNameDisplay) {
+    playerNameDisplay.textContent = pseudo;
+  }
+
+  homeScreen?.classList.add("hidden");
+  lobbyScreen?.classList.remove("hidden");
+}
+
+joinBtn?.addEventListener("click", (e) => {
+  e.preventDefault();
+  handleJoinLobby();
+});
+
+pseudoInput?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    handleJoinLobby();
+  }
+});
+
+let isReady = false;
+readyBtn?.addEventListener("click", () => {
+  isReady = !isReady;
+  if (readyStatus) {
+    readyStatus.textContent = isReady ? "Prêt !" : "Non prêt";
+  }
+  readyBtn?.classList.toggle("ready-active", isReady);
+});
 
 let gameStarted = false;
 
@@ -546,6 +598,7 @@ playButton.addEventListener("click", async () => {
     });
 
     gameStarted = true;
+    lobbyScreen?.classList.add("hidden");
     homeScreen.hidden = true;
     gameScreen.hidden = false;
   } catch (error) {
