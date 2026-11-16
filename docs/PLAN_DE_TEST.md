@@ -40,7 +40,7 @@ La stratégie adoptée applique le modèle de la **Pyramide des Tests** pour éq
 | **Tests Unitaires Client** | Gestionnaires (`InputManager`, `NetworkManager`) | Jest / `ts-jest` | Pôle Frontend & DevOps | Chaque commit / PR (CI) |
 | **Tests d'Intégration** | Échanges WebSocket réels (Client <-> Serveur) | Jest + client `ws` | Pôle DevOps & Qualité | Chaque commit / PR (CI) |
 | **Tests de Charge / Dynamiques**| Tenue sous concurrence WebSocket (30 VUs) | k6 (Grafana k6) | Pôle DevOps (Mathys) | Jalons de release / CI ponctuelle |
-| **Tests Bout-en-Bout (E2E)** | Rendu interface & interactions utilisateur | Cypress | Pôle DevOps (Kilian) | Jalons de release / Pre-release |
+| **Tests Bout-en-Bout (E2E)** | Parcours UI & Interactions (Menu / Lobby) | Cypress | Pôle DevOps (SOVAN) | Chaque commit / PR (CI) |
 | **Mesure de Couverture** | Rapports LCOV (Backend & Frontend) | Jest `--coverage` -> SonarCloud | Pôle DevOps & Qualité | Chaque commit / PR (CI) |
 | **Validation Packaging** | Image Docker Serveur & docker-compose | Docker Buildx / Compose | Pôle DevOps & Qualité | Chaque commit / PR (CI) |
 
@@ -112,13 +112,19 @@ La stratégie adoptée applique le modèle de la **Pyramide des Tests** pour éq
 
 ---
 
-### 3.5. Tests Bout-en-Bout Interface (Cypress E2E - Rôle DevOps Kilian)
+### 3.5. Tests Bout-en-Bout Interface (Cypress E2E - Rôle DevOps SOVAN)
 
-- **Objectif** : Valider le parcours joueur dans l'interface graphique encapsulée.
-- **Scénarios couverts** :
-  - Affichage de l'arène de jeu et chargement des textures PixiJS.
-  - Rendu initial des joueurs et des blocs de la grille.
-  - Réactivité de l'affichage suite aux entrées clavier du joueur.
+- **Fichier de script** : `client/cypress/e2e/menu.cy.ts`
+- **Objectif** : Simuler et valider le parcours complet d'un joueur dans l'interface graphique (Menu principal, saisie du pseudo, validation des erreurs, transition vers le Lobby et gestion des états d'attente).
+- **Scénarios couverts (8 tests automatisés 100% passants)** :
+  - **TU-E2E-01** : Affichage conforme du titre principal (*Bomberman Arena*).
+  - **TU-E2E-02** : Présence et visibilité du champ de saisie du pseudo et du bouton de soumission.
+  - **TU-E2E-03** : Déclenchement et affichage du message d'erreur si le pseudo est vide (*au moins 2 caractères*).
+  - **TU-E2E-04** : Déclenchement de l'erreur si le pseudo ne comporte qu'un seul caractère.
+  - **TU-E2E-05** : Validation de la saisie d'un pseudo valide (`Bob`), masquage du menu et bascule vers l'écran Lobby (`[data-cy="lobby-screen"]`).
+  - **TU-E2E-06** : Validation de la soumission du formulaire via la touche clavier `Entrée`.
+  - **TU-E2E-07** : Affichage des informations du joueur connecté dans le Lobby et statut initial *Non prêt*.
+  - **TU-E2E-08** : Interaction avec le bouton *Prêt*, mise à jour dynamique de l'état graphique (*Prêt !* / *Non prêt*).
 
 ---
 
@@ -145,15 +151,19 @@ npm test
 cd client
 npm run test:coverage
 
-# 5. Vérification de la conformité du style et règles statiques (ESLint)
+# 5. Tests Bout-en-Bout Interface (Cypress E2E)
+cd client
+npm run cypress:run
+
+# 6. Vérification de la conformité du style et règles statiques (ESLint)
 cd server && npm run lint
 cd ../client && npm run lint
 
-# 6. Exécution du test de charge dynamique (k6)
+# 7. Exécution du test de charge dynamique (k6)
 # Prérequis : Serveur démarré en arrière-plan via 'cd server && npm start'
 k6 run tests/load/websocket-stress.js
 
-# 7. Validation de la conteneurisation Docker Serveur
+# 8. Validation de la conteneurisation Docker Serveur
 docker compose config
 docker compose up --build -d
 ```
@@ -164,9 +174,10 @@ Tous les scénarios de test et de validation de packaging sont intégrés dans l
 
 1. **Job `qualite-serveur`** : installe les dépendances via `npm install`, applique les règles ESLint, puis exécute l'intégralité de la suite Jest backend avec génération du rapport de couverture LCOV (`npm run test:coverage`). Le rapport est sauvegardé comme artefact GitHub Actions.
 2. **Job `qualite-client`** : vérifie la compilation TypeScript, le linting et les tests Jest avec couverture LCOV de l'interface client, puis sauvegarde le rapport comme artefact.
-3. **Job `analyse-sonarqube`** : s'exécute après la fin des jobs de test, télécharge les artefacts de couverture LCOV serveur et client, et déclenche le scanner SonarCloud pour alimenter le Quality Gate avec les métriques réelles.
-4. **Job `build-docker-serveur`** : valide la construction de l'image Docker du serveur (`server/Dockerfile`) via Buildx et vérifie l'intégrité syntaxique du fichier `docker-compose.yml`.
-5. **Job `build-tauri`** : compile l'application cliente et vérifie l'intégrité du binaire de bureau généré.
+3. **Job `tests-e2e-client`** : démarre le serveur Vite et exécute la suite complète des tests de bout-en-bout Cypress en mode headless. En cas d'échec, les captures d'écran sont automatiquement archivées comme artefacts pour analyse.
+4. **Job `analyse-sonarqube`** : s'exécute après la fin des jobs de test, télécharge les artefacts de couverture LCOV serveur et client, et déclenche le scanner SonarCloud pour alimenter le Quality Gate avec les métriques réelles.
+5. **Job `build-docker-serveur`** : valide la construction de l'image Docker du serveur (`server/Dockerfile`) via Buildx et vérifie l'intégrité syntaxique du fichier `docker-compose.yml`.
+6. **Job `build-tauri`** : compile l'application cliente et vérifie l'intégrité du binaire de bureau généré (conditionné au succès des tests unitaires et E2E).
 
 ---
 
