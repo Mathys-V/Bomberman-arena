@@ -1,6 +1,6 @@
 // server/server.ts
 import http from 'http';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { EventRouter } from './src/network/EventRouter';
 
 // Serveur HTTP de base pour Jest
@@ -21,9 +21,14 @@ wss.on('connection', (ws) => {
     // Routage du message via EventRouter
     const response = EventRouter.handleMessage(messageString);
 
-    // Envoi de la réponse au client
+    // Envoi de la réponse à TOUS les clients (Broadcast global)
     if (response) {
-      ws.send(JSON.stringify(response));
+      const responseString = JSON.stringify(response);
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(responseString);
+        }
+      });
     }
   });
 
