@@ -70,4 +70,39 @@ describe("EventBus", () => {
       bus.emit("player:moved", { playerId: "p1", x: 0, y: 0 });
     }).not.toThrow();
   });
+
+  it("prend en charge les événements Phase 3 (bombes, grille, lobby, fin de partie)", () => {
+    const bombPlacedCb = jest.fn();
+    const bombExplodedCb = jest.fn();
+    const gridCb = jest.fn();
+    const lobbyCb = jest.fn();
+    const gameOverCb = jest.fn();
+
+    bus.on("bomb:placed", bombPlacedCb);
+    bus.on("bomb:exploded", bombExplodedCb);
+    bus.on("grid:updated", gridCb);
+    bus.on("lobby:updated", lobbyCb);
+    bus.on("game:over", gameOverCb);
+
+    bus.emit("bomb:placed", { playerId: "p1", x: 2, y: 2 });
+    bus.emit("bomb:exploded", {
+      x: 2,
+      y: 2,
+      affectedTiles: [{ x: 2, y: 2 }],
+      destroyedCrates: [],
+    });
+    bus.emit("grid:updated", { grid: [[0, 1]] });
+    bus.emit("lobby:updated", {
+      lobbyId: "room",
+      status: "waiting",
+      players: [],
+    });
+    bus.emit("game:over", { winnerId: "p1" });
+
+    expect(bombPlacedCb).toHaveBeenCalledTimes(1);
+    expect(bombExplodedCb).toHaveBeenCalledTimes(1);
+    expect(gridCb).toHaveBeenCalledTimes(1);
+    expect(lobbyCb).toHaveBeenCalledTimes(1);
+    expect(gameOverCb).toHaveBeenCalledTimes(1);
+  });
 });
