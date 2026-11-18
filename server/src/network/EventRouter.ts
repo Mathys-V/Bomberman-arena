@@ -1,6 +1,6 @@
 // src/network/EventRouter.ts
 import { Player } from '../engine/Player';
-import { Grid } from '../engine/Grid'; //[cite: 10]
+import { Grid } from '../engine/Grid';
 
 export interface ClientMessage {
   event: string;
@@ -13,11 +13,11 @@ export interface ServerMessage {
 }
 
 export class EventRouter {
-  private static readonly players: Map<string, Player> = new Map(); //[cite: 9]
-  private static grid: Grid = new Grid(15, 13); //[cite: 10]
+  private static readonly players: Map<string, Player> = new Map();
+  private static grid: Grid = new Grid(13, 13); // Dimension corrigée en 13x13
 
-  public static setGrid(customGrid: Grid): void { //[cite: 10]
-    this.grid = customGrid; //[cite: 10]
+  public static setGrid(customGrid: Grid): void {
+    this.grid = customGrid;
   }
 
   public static handleMessage(rawMessage: string): ServerMessage | null {
@@ -42,23 +42,18 @@ export class EventRouter {
 
         case "PLAYER_MOVE": {
           const pId = (data.playerId as string) || "unknown";
-          const direction = data.direction as string;
+          const direction = data.direction as 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 
           if (!this.players.has(pId)) {
-            const startX = typeof data.x === 'number' ? data.x : 1;
-            const startY = typeof data.y === 'number' ? data.y : 3;
+            const startX = typeof data.x === 'number' ? data.x : 0;
+            const startY = typeof data.y === 'number' ? data.y : 0;
             this.players.set(pId, new Player(startX, startY));
           }
+          
           const player = this.players.get(pId)!;
-
-          if (pId === 'p1' || pId === 'test_p1') {
-            if (direction === 'UP') player.y -= 1;
-            else if (direction === 'DOWN') player.y += 1;
-            else if (direction === 'LEFT') player.x -= 1;
-            else if (direction === 'RIGHT') player.x += 1;
-          } else {
-            player.move(direction as 'UP' | 'DOWN' | 'LEFT' | 'RIGHT', this.grid);
-          }
+          
+          // Suppression du bypass p1 : tout le monde utilise les vraies collisions
+          player.move(direction, this.grid);
             
           return {
             event: "POSITION_UPDATED",
