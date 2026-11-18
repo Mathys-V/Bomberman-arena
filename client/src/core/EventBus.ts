@@ -1,4 +1,11 @@
-import { PlayerPositionUpdate } from "../types/game";
+import {
+  BombExplodedEvent,
+  BombPlacedEvent,
+  GameOverEvent,
+  GridUpdateEvent,
+  LobbyUpdateEvent,
+  PlayerPositionUpdate,
+} from "../types/game";
 
 /**
  * Dictionnaire d'événements fortement typés pour le bus d'événements.
@@ -6,6 +13,11 @@ import { PlayerPositionUpdate } from "../types/game";
  */
 export interface GameEvents {
   "player:moved": PlayerPositionUpdate;
+  "bomb:placed": BombPlacedEvent;
+  "bomb:exploded": BombExplodedEvent;
+  "grid:updated": GridUpdateEvent;
+  "lobby:updated": LobbyUpdateEvent;
+  "game:over": GameOverEvent;
   "network:status": "connected" | "disconnected" | "error";
 }
 
