@@ -50,4 +50,19 @@ export class Grid {
     // Considère tout ce qui n'est pas 0 (vide) comme un obstacle
     return this.layout[y][x] !== 0;
   }
+
+  destroyCrate(x: number, y: number): boolean {
+    // Vérification des limites de la grille
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+      return false;
+    }
+
+    // Si c'est une caisse destructible (2), on la détruit (0)
+    if (this.layout[y][x] === 2) {
+      this.layout[y][x] = 0;
+      return true;
+    }
+
+    return false;
+  }
 }
