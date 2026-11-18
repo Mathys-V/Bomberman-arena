@@ -11,5 +11,5 @@ export default defineConfig([
     languageOptions: { globals: globals.browser },
   },
   tseslint.configs.recommended,
-  { ignores: ["jest.config.js", "node_modules", "dist"] },
+  { ignores: ["jest.config.js", "cypress.config.js", "node_modules", "dist"] },
 ]);

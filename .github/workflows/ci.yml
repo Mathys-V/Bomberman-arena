@@ -65,6 +65,36 @@ jobs:
           name: coverage-client
           path: client/coverage/lcov.info
 
+  tests-e2e-client:
+    name: Tests E2E Client (Cypress)
+    runs-on: ubuntu-latest
+    needs: [qualite-client]
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: Configuration Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Exécution des tests Cypress E2E
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ./client
+          start: npm run dev
+          wait-on: "http://127.0.0.1:5173"
+          wait-on-timeout: 120
+          record: false
+
+      - name: Sauvegarde des captures en cas d'échec
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: client/cypress/screenshots
+          if-no-files-found: ignore
+
   analyse-sonarqube:
     name: Analyse SonarQube
     runs-on: ubuntu-latest
@@ -118,7 +148,7 @@ jobs:
   build-tauri:
     name: Build des exécutables Tauri
     runs-on: ubuntu-22.04
-    needs: [qualite-client] # Attend que les tests clients passent avant de build
+    needs: [qualite-client, tests-e2e-client] # Attend que les tests unitaires et E2E passent avant de compiler
     steps:
       - name: Checkout du dépôt
         uses: actions/checkout@v4

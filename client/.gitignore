@@ -24,3 +24,8 @@ gen/
 *.njsproj
 *.sln
 *.sw?
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+
