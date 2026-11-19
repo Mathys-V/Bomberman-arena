@@ -68,4 +68,14 @@ export class Bomb {
 
         return tiles;
     }
+
+    public explode(grid: Grid): { x: number; y: number; destroyedCrate: boolean }[] {
+        const tiles = this.getExplosionTiles(grid);
+        
+        return tiles.map((tile) => ({
+            x: tile.x,
+            y: tile.y,
+            destroyedCrate: grid.destroyCrate(tile.x, tile.y)
+        }));
+    }
 }

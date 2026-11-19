@@ -36,7 +36,7 @@ describe('Bomb Entity', () => {
         expect(onExplodeMock).toHaveBeenCalledTimes(1);
     });
 
-it('devrait calculer la zone en s\'arrêtant sur les murs et caisses', () => {
+    it('devrait calculer la zone en s\'arrêtant sur les murs et caisses', () => {
         const bomb = new Bomb(2, 2, 'player1', 3);
         
         // Création d'une fausse grille pour le test
@@ -54,7 +54,6 @@ it('devrait calculer la zone en s\'arrêtant sur les murs et caisses', () => {
 
         const tiles = bomb.getExplosionTiles(mockGrid);
 
-        // Vérification
         // Centre (1) + Droite (2) + Gauche stoppée (1) + Bas stoppée (1) + Haut bloquée (0) = 5 cases
         expect(tiles).toHaveLength(5);
         expect(tiles).toContainEqual({ x: 2, y: 2 }); // Centre
@@ -62,6 +61,25 @@ it('devrait calculer la zone en s\'arrêtant sur les murs et caisses', () => {
         expect(tiles).toContainEqual({ x: 4, y: 2 }); // Droite 2 (vide)
         expect(tiles).toContainEqual({ x: 1, y: 2 }); // Gauche (caisse détruite)
         expect(tiles).toContainEqual({ x: 2, y: 3 }); // Bas (caisse détruite)
-        // La case {x:2, y:1} (mur en haut) ne doit pas y être
+    });
+
+    it('devrait détruire uniquement les caisses touchées sur la grille lors de explode()', () => {
+        const grid = new Grid(5, 5);
+        const layout = grid.getLayout();
+
+        // On force un scénario précis autour de (2,2)
+        layout[2][2] = 0; // Centre
+        layout[2][3] = 2; // Caisse à droite
+        layout[1][2] = 1; // Mur incassable en haut
+
+        const bomb = new Bomb(2, 2, 'player1', 1);
+        const results = bomb.explode(grid);
+
+        // La caisse à droite doit être devenue une case vide (0)
+        expect(grid.getLayout()[2][3]).toBe(0);
+        // Le mur en haut doit rester intact (1)
+        expect(grid.getLayout()[1][2]).toBe(1);
+        // Le résultat doit indiquer que la caisse en (3,2) a bien été détruite
+        expect(results).toContainEqual({ x: 3, y: 2, destroyedCrate: true });
     });
 });

@@ -12,12 +12,9 @@ import { InputManager } from "./InputManager";
 import { NetworkManager } from "./NetworkManager";
 import { MockNetworkManager } from "./network/MockNetworkManager";
 import { INetworkManager } from "./network/INetworkManager";
+import { MessageDispatcher } from "./network/MessageDispatcher";
 import { EventBus } from "./core/EventBus";
-import {
-  Direction,
-  parsePositionUpdated,
-  PlayerPositionUpdate,
-} from "./types/game";
+import { Direction, PlayerPositionUpdate } from "./types/game";
 import "./styles.css";
 
 // -----------------------------------------------------------------------------
@@ -94,6 +91,7 @@ let gameStarted = false;
 // -----------------------------------------------------------------------------
 
 export const eventBus = new EventBus();
+export const messageDispatcher = new MessageDispatcher(eventBus);
 
 /**
  * Session de jeu active encapsulant les instances réseau et contrôles.
@@ -523,13 +521,10 @@ playButton.addEventListener("click", async () => {
     activeSession.networkManager = createNetworkManager();
     activeSession.networkManager.connect();
 
-    // 2. Écoute des trames entrantes et acheminement vers l'EventBus
+    // 2. Écoute des trames entrantes et acheminement vers l'EventBus via MessageDispatcher
     activeSession.networkManager.listen((rawData: unknown) => {
       console.log("Données reçues du réseau :", rawData);
-      const positionUpdate = parsePositionUpdated(rawData);
-      if (positionUpdate) {
-        eventBus.emit("player:moved", positionUpdate);
-      }
+      messageDispatcher.dispatch(rawData);
     });
 
     // 3. Initialisation des contrôles (capture clavier -> envoi réseau)
